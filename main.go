@@ -9,11 +9,9 @@ package main
 // @host localhost:5600
 
 import (
-	"app/config"
-	"app/handlers"
-
-	_ "app/docs"
-
+	"github.com/USACE/mcat-ras/config"
+	_ "github.com/USACE/mcat-ras/docs"
+	"github.com/USACE/mcat-ras/handlers"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	echoSwagger "github.com/swaggo/echo-swagger"

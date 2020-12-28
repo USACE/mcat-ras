@@ -1,4 +1,4 @@
-module app
+module github.com/USACE/mcat-ras
 
 go 1.15
 
