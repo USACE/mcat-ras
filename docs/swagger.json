@@ -1,0 +1,419 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "API for the RAS MCAT",
+        "title": "RAS MCAT API",
+        "termsOfService": "http://swagger.io/terms/",
+        "contact": {
+            "name": "API Support",
+            "email": "slawler@dewberry.com"
+        },
+        "version": "1.0"
+    },
+    "host": "localhost:5600",
+    "paths": {
+        "/geospatialdata": {
+            "get": {
+                "description": "Extract geospatial data from a RAS model given an s3 key",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MCAT"
+                ],
+                "summary": "Extract geospatial data",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "/pfra-models/mipmodels/MD/M000309/T1ChptnkR.prj",
+                        "name": "definition_file",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.SimpleResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/index": {
+            "get": {
+                "description": "Extract metadata from a RAS model given an s3 key",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MCAT"
+                ],
+                "summary": "Index a RAS model",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "/pfra-models/mipmodels/MD/M000309/T1ChptnkR.prj",
+                        "name": "definition_file",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ras.Model"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.SimpleResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/isamodel": {
+            "get": {
+                "description": "Check if the given key is a RAS model",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MCAT"
+                ],
+                "summary": "Check if the given key is a RAS model",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "/pfra-models/mipmodels/MD/M000309/T1ChptnkR.prj",
+                        "name": "definition_file",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    }
+                }
+            }
+        },
+        "/isgeospatial": {
+            "get": {
+                "description": "Check if the RAS model has geospatial information",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MCAT"
+                ],
+                "summary": "Check if the RAS model has geospatial information",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "/pfra-models/mipmodels/MD/M000309/T1ChptnkR.prj",
+                        "name": "definition_file",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    }
+                }
+            }
+        },
+        "/modeltype": {
+            "get": {
+                "description": "Extract the model type given an s3 key",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MCAT"
+                ],
+                "summary": "Extract the model type",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "/pfra-models/mipmodels/MD/M000309/T1ChptnkR.prj",
+                        "name": "definition_file",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "RAS",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.SimpleResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/modelversion": {
+            "get": {
+                "description": "Extract the RAS model version given an s3 key",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "MCAT"
+                ],
+                "summary": "Extract the RAS model version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "/pfra-models/mipmodels/MD/M000309/T1ChptnkR.prj",
+                        "name": "definition_file",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "4.0",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.SimpleResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/ping": {
+            "get": {
+                "description": "Check which services are operational",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Health Check"
+                ],
+                "summary": "Status Check",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.SimpleResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "handlers.SimpleResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                }
+            }
+        },
+        "ras.ControlFiles": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "description": "placeholder",
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "paths": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "ras.ForcingFiles": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "description": "placeholder",
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "paths": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "ras.GeometryFiles": {
+            "type": "object",
+            "properties": {
+                "featuresProperties": {
+                    "description": "placeholder",
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "georeference": {
+                    "description": "placeholder",
+                    "type": "object"
+                },
+                "paths": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "ras.InputFiles": {
+            "type": "object",
+            "properties": {
+                "controlFiles": {
+                    "$ref": "#/definitions/ras.ControlFiles"
+                },
+                "forcingFiles": {
+                    "$ref": "#/definitions/ras.ForcingFiles"
+                },
+                "geometryFiles": {
+                    "$ref": "#/definitions/ras.GeometryFiles"
+                },
+                "localVariables": {
+                    "description": "placeholder",
+                    "type": "object"
+                },
+                "simulationVariables": {
+                    "description": "placeholder",
+                    "type": "object"
+                }
+            }
+        },
+        "ras.Model": {
+            "type": "object",
+            "properties": {
+                "definitionFile": {
+                    "type": "string"
+                },
+                "files": {
+                    "$ref": "#/definitions/ras.ModelFiles"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "ras.ModelFiles": {
+            "type": "object",
+            "properties": {
+                "inputFiles": {
+                    "$ref": "#/definitions/ras.InputFiles"
+                },
+                "outputFiles": {
+                    "$ref": "#/definitions/ras.OutputFiles"
+                },
+                "supplementalFiles": {
+                    "$ref": "#/definitions/ras.SupplementalFiles"
+                }
+            }
+        },
+        "ras.OutputFiles": {
+            "type": "object",
+            "properties": {
+                "modelPrediction": {
+                    "description": "placeholder",
+                    "type": "object"
+                },
+                "paths": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "runFiles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "runLogs": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "ras.SupplementalFiles": {
+            "type": "object",
+            "properties": {
+                "observationalData": {
+                    "description": "placeholder",
+                    "type": "object"
+                },
+                "paths": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "visulizations": {
+                    "description": "placeholder",
+                    "type": "object"
+                }
+            }
+        }
+    }
+}

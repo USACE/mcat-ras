@@ -1,0 +1,278 @@
+definitions:
+  handlers.SimpleResponse:
+    properties:
+      message:
+        type: string
+      status:
+        type: integer
+    type: object
+  ras.ControlFiles:
+    properties:
+      data:
+        additionalProperties: true
+        description: placeholder
+        type: object
+      paths:
+        items:
+          type: string
+        type: array
+    type: object
+  ras.ForcingFiles:
+    properties:
+      data:
+        additionalProperties: true
+        description: placeholder
+        type: object
+      paths:
+        items:
+          type: string
+        type: array
+    type: object
+  ras.GeometryFiles:
+    properties:
+      featuresProperties:
+        additionalProperties: true
+        description: placeholder
+        type: object
+      georeference:
+        description: placeholder
+        type: object
+      paths:
+        items:
+          type: string
+        type: array
+    type: object
+  ras.InputFiles:
+    properties:
+      controlFiles:
+        $ref: '#/definitions/ras.ControlFiles'
+      forcingFiles:
+        $ref: '#/definitions/ras.ForcingFiles'
+      geometryFiles:
+        $ref: '#/definitions/ras.GeometryFiles'
+      localVariables:
+        description: placeholder
+        type: object
+      simulationVariables:
+        description: placeholder
+        type: object
+    type: object
+  ras.Model:
+    properties:
+      definitionFile:
+        type: string
+      files:
+        $ref: '#/definitions/ras.ModelFiles'
+      type:
+        type: string
+      version:
+        type: string
+    type: object
+  ras.ModelFiles:
+    properties:
+      inputFiles:
+        $ref: '#/definitions/ras.InputFiles'
+      outputFiles:
+        $ref: '#/definitions/ras.OutputFiles'
+      supplementalFiles:
+        $ref: '#/definitions/ras.SupplementalFiles'
+    type: object
+  ras.OutputFiles:
+    properties:
+      modelPrediction:
+        description: placeholder
+        type: object
+      paths:
+        items:
+          type: string
+        type: array
+      runFiles:
+        items:
+          type: string
+        type: array
+      runLogs:
+        items:
+          type: string
+        type: array
+    type: object
+  ras.SupplementalFiles:
+    properties:
+      observationalData:
+        description: placeholder
+        type: object
+      paths:
+        items:
+          type: string
+        type: array
+      visulizations:
+        description: placeholder
+        type: object
+    type: object
+host: localhost:5600
+info:
+  contact:
+    email: slawler@dewberry.com
+    name: API Support
+  description: API for the RAS MCAT
+  termsOfService: http://swagger.io/terms/
+  title: RAS MCAT API
+  version: "1.0"
+paths:
+  /geospatialdata:
+    get:
+      consumes:
+      - application/json
+      description: Extract geospatial data from a RAS model given an s3 key
+      parameters:
+      - description: /pfra-models/mipmodels/MD/M000309/T1ChptnkR.prj
+        in: query
+        name: definition_file
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.SimpleResponse'
+      summary: Extract geospatial data
+      tags:
+      - MCAT
+  /index:
+    get:
+      consumes:
+      - application/json
+      description: Extract metadata from a RAS model given an s3 key
+      parameters:
+      - description: /pfra-models/mipmodels/MD/M000309/T1ChptnkR.prj
+        in: query
+        name: definition_file
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ras.Model'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.SimpleResponse'
+      summary: Index a RAS model
+      tags:
+      - MCAT
+  /isamodel:
+    get:
+      consumes:
+      - application/json
+      description: Check if the given key is a RAS model
+      parameters:
+      - description: /pfra-models/mipmodels/MD/M000309/T1ChptnkR.prj
+        in: query
+        name: definition_file
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: boolean
+      summary: Check if the given key is a RAS model
+      tags:
+      - MCAT
+  /isgeospatial:
+    get:
+      consumes:
+      - application/json
+      description: Check if the RAS model has geospatial information
+      parameters:
+      - description: /pfra-models/mipmodels/MD/M000309/T1ChptnkR.prj
+        in: query
+        name: definition_file
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: boolean
+      summary: Check if the RAS model has geospatial information
+      tags:
+      - MCAT
+  /modeltype:
+    get:
+      consumes:
+      - application/json
+      description: Extract the model type given an s3 key
+      parameters:
+      - description: /pfra-models/mipmodels/MD/M000309/T1ChptnkR.prj
+        in: query
+        name: definition_file
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: RAS
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.SimpleResponse'
+      summary: Extract the model type
+      tags:
+      - MCAT
+  /modelversion:
+    get:
+      consumes:
+      - application/json
+      description: Extract the RAS model version given an s3 key
+      parameters:
+      - description: /pfra-models/mipmodels/MD/M000309/T1ChptnkR.prj
+        in: query
+        name: definition_file
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: "4.0"
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handlers.SimpleResponse'
+      summary: Extract the RAS model version
+      tags:
+      - MCAT
+  /ping:
+    get:
+      consumes:
+      - application/json
+      description: Check which services are operational
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.SimpleResponse'
+      summary: Status Check
+      tags:
+      - Health Check
+swagger: "2.0"

@@ -1,0 +1,13 @@
+version: "3.4"
+
+services:
+  mcat-ras:
+    build:
+      context: ./
+    volumes:
+      - ./:/app
+    ports:
+      - 5600:5600
+    env_file:
+      - ./.env
+    entrypoint: CompileDaemon --build="go build main.go" --command=./main
