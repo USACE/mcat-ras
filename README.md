@@ -12,11 +12,8 @@ The MCAT includes:
 - an API for executing the above methods.
 - a docker container for running the methods and API.
 
-<br/>
 
 ## Contents  
-
----
 - `/config`: contains the data structure that holds the config information for the API.
 - `/docs`: contains the auto-generated swagger files.
 - `/handlers`: contains the handler function for each API endpoint.
@@ -24,10 +21,8 @@ The MCAT includes:
 - `docker-compose.yml`: options for building the dockerfile.
 - `main.go` : API Server.
 
-<br/>
 
 ### Getting Started
-
 ---
 
 - Add a .env file to the root level of this directory with the following structure:
@@ -40,10 +35,8 @@ The MCAT includes:
 - Run `docker-compose up`
 - To teardown, run `docker-compose down`
 
-<br/>
 
 ### MCAT REST Specification
-
 ---
 The following requests can be used to interrogate a model whose storage location is defined by the s3_key parameter:
 
@@ -62,7 +55,6 @@ The following requests can be used to interrogate a model whose storage location
 
 *For example: `http://mcat-ras:5600/isamodel?definition_file=models/ras/ex_model.prj`*
 
-<br/>
 
 ### Swagger Documentation:
 
