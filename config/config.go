@@ -24,11 +24,12 @@ func Init() *APIConfig {
 	config := new(APIConfig)
 	config.Host = "" // 0.0.0.0
 	config.Port = 5600
-	config.FileStore = fileStoreInit(false)
+	config.FileStore = FileStoreInit(false)
 	return config
 }
 
-func fileStoreInit(local bool) *filestore.FileStore {
+// FileStoreInit initializes the filestore object
+func FileStoreInit(local bool) *filestore.FileStore {
 
 	var fs filestore.FileStore
 	var err error
