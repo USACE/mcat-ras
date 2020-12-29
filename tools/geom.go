@@ -40,6 +40,7 @@ func getGeomData(rm *RasModel, fn string, wg *sync.WaitGroup, errChan chan error
 
 	sc := bufio.NewScanner(f)
 	var line string
+	header := true
 	for sc.Scan() {
 
 		line = sc.Text()
@@ -68,9 +69,13 @@ func getGeomData(rm *RasModel, fn string, wg *sync.WaitGroup, errChan chan error
 
 			case "Program Version":
 				meta.ProgramVersion = data[1]
+
+			case "River Reach", "Storage Area":
+				header = false
+
 			}
 
-		} else if beginDescription {
+		} else if header && beginDescription {
 
 			for sc.Scan() {
 				line = sc.Text()
