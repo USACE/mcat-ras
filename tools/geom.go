@@ -100,7 +100,7 @@ func getGeomData(rm *RasModel, fn string, wg *sync.WaitGroup, errChan chan error
 }
 
 // sourceCRS
-var sourceCRS string = `PROJCS["NAD_1983_StatePlane_Texas_Central_FIPS_4203_Feet",GEOGCS["GCS_North_American_1983",DATUM["D_North_American_1983",SPHEROID["GRS_1980",6378137.0,298.257222101]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]],PROJECTION["Lambert_Conformal_Conic"],PARAMETER["False_Easting",2296583.333333333],PARAMETER["False_Northing",9842500.0],PARAMETER["Central_Meridian",-100.3333333333333],PARAMETER["Standard_Parallel_1",30.11666666666667],PARAMETER["Standard_Parallel_2",31.88333333333333],PARAMETER["Latitude_Of_Origin",29.66666666666667],UNIT["Foot_US",0.3048006096012192]]`
+var sourceCRS string = `PROJCS["NAD_1983_StatePlane_Maryland_FIPS_1900_Feet",GEOGCS["GCS_North_American_1983",DATUM["D_North_American_1983",SPHEROID["GRS_1980",6378137.0,298.257222101]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]],PROJECTION["Lambert_Conformal_Conic"],PARAMETER["False_Easting",1312333.333333333],PARAMETER["False_Northing",0.0],PARAMETER["Central_Meridian",-77.0],PARAMETER["Standard_Parallel_1",38.3],PARAMETER["Standard_Parallel_2",39.45],PARAMETER["Latitude_Of_Origin",37.66666666666666],UNIT["Foot_US",0.3048006096012192]]`
 
 // DestinationCRS ...
 var DestinationCRS int = 4326
@@ -283,6 +283,17 @@ func flipXYLineString25D(xyzLineString gdal.Geometry) gdal.Geometry {
 	return yxzLineString
 }
 
+func flipXYLinearRing(xyLinearRing gdal.Geometry) gdal.Geometry {
+	yxLinearRing := gdal.Create(gdal.GT_LinearRing)
+	nPoints := xyLinearRing.PointCount()
+	for i := 0; i < nPoints; i++ {
+		x, y, _ := xyLinearRing.Point(i)
+		yxLinearRing.AddPoint2D(y, x)
+	}
+	xyLinearRing.Destroy()
+	return yxLinearRing
+}
+
 func flipXYPoint(xyPoint gdal.Geometry) gdal.Geometry {
 	yxPoint := gdal.Create(gdal.GT_Point)
 	nPoints := xyPoint.PointCount()
@@ -405,6 +416,34 @@ func getBanks(line string, transform gdal.CoordinateTransform, xsLayer vectorLay
 	return layers, nil
 }
 
+func getStorageArea(sc *bufio.Scanner, transform gdal.CoordinateTransform) (vectorLayer, error) {
+	layer := vectorLayer{FeatureName: strings.TrimSpace(strings.Split(rightofEquals(sc.Text()), ",")[0])}
+
+	xyPairs, err := getDataPairsfromTextBlock("Storage Area Surface Line=", sc, 32, 16)
+	if err != nil {
+		return layer, err
+	}
+
+	xyLinearRing := gdal.Create(gdal.GT_LinearRing)
+	for _, pair := range xyPairs {
+		xyLinearRing.AddPoint2D(pair[0], pair[1])
+	}
+
+	xyLinearRing.Transform(transform)
+	// This is a temporary fix since the x and y values need to be flipped:
+	yxLinearRing := flipXYLinearRing(xyLinearRing)
+
+	yxPolygon := gdal.Create(gdal.GT_Polygon)
+	yxPolygon.AddGeometry(yxLinearRing)
+	yxMultiPolygon := yxPolygon.ForceToMultiPolygon()
+	wkb, err := yxMultiPolygon.ToWKB()
+	if err != nil {
+		return layer, err
+	}
+	layer.Geometry = wkb
+	return layer, err
+}
+
 // GetGeospatialData ...
 func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string) error {
 	geomFileName := filepath.Base(geomFilePath)
@@ -434,6 +473,13 @@ func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string)
 			}
 			f.Rivers = append(f.Rivers, riverLayer)
 			riverReachName = riverLayer.FeatureName
+
+		case strings.HasPrefix(line, "Storage Area="):
+			storageAreaLayer, err := getStorageArea(sc, transform)
+			if err != nil {
+				return err
+			}
+			f.StorageAreas = append(f.StorageAreas, storageAreaLayer)
 
 		case strings.HasPrefix(line, "Type RM Length L Ch R = 1"):
 			xsLayer, bankLayers, err := getXSBanks(sc, transform, riverReachName)
