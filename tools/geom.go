@@ -18,10 +18,83 @@ import (
 // GeomFileContents keywords  and data container for ras flow file search
 type GeomFileContents struct {
 	Path           string
-	FileExt        string //`json:"File Extension"`
-	GeomTitle      string //`json:"Geom Title"`
-	ProgramVersion string //`json:"Program Version"`
-	Description    string //`json:"Description"`
+	FileExt        string                //`json:"File Extension"`
+	GeomTitle      string                //`json:"Geom Title"`
+	ProgramVersion string                //`json:"Program Version"`
+	Description    string                //`json:"Description"`
+	Structures     []hydraulicStructures //`json:"Hydraulic Structures"`
+}
+
+type hydraulicStructures struct {
+	River       string     //`json:"River Name"`
+	Reach       string     //`json:"Reach Name"`
+	NumXS       int        //`json:"N CrossSections"`
+	NumCulverts int        //`json:"N Culverts"`
+	BridgeData  bridgeData //`json:"Bridges"`
+	NumInlines  int        //`json:"N Inlines"`
+}
+
+type bridgeData struct {
+	NumBridges int       //`json:"Num Bridges"`
+	Bridges    []bridges //`json:"Num Bridges"`
+}
+
+type bridges struct {
+	Name string
+}
+
+func rightofEquals(line string) string {
+	return strings.TrimSpace(strings.Split(line, "=")[1])
+}
+
+func getDescription(sc *bufio.Scanner) (string, error) {
+	description := ""
+	for sc.Scan() {
+		line := sc.Text()
+		endDescription, err := regexp.MatchString("END GEOM DESCRIPTION", line)
+		if err != nil {
+			return description, err
+		}
+		if endDescription {
+			return description, nil
+		}
+		if line != "" {
+			description += line + "\n"
+		}
+	}
+	return description, nil
+}
+
+func getHydraulicStructureData(sc *bufio.Scanner) (hydraulicStructures, error) {
+	riverReach := strings.Split(rightofEquals(sc.Text()), ",")
+	structures := hydraulicStructures{River: strings.TrimSpace(riverReach[0]), Reach: strings.TrimSpace(riverReach[1])}
+	bData := bridgeData{}
+	for sc.Scan() {
+		line := sc.Text()
+		if strings.HasPrefix(line, "Type RM Length L Ch R =") {
+			data := strings.Split(rightofEquals(line), ",")
+			structureType, err := strconv.Atoi(strings.TrimSpace(data[0]))
+			if err != nil {
+				return structures, err
+			}
+			switch structureType {
+			case 1:
+				structures.NumXS++
+
+			case 2:
+				structures.NumCulverts++
+
+			case 3:
+				bData.NumBridges++
+
+			case 5:
+				structures.NumInlines++
+
+			}
+		}
+	}
+	structures.BridgeData = bData
+	return structures, nil
 }
 
 // getGeomData Reads a geometry file. returns none to allow concurrency
@@ -42,59 +115,37 @@ func getGeomData(rm *RasModel, fn string, wg *sync.WaitGroup, errChan chan error
 	var line string
 	header := true
 	for sc.Scan() {
-
 		line = sc.Text()
+		switch {
+		case strings.HasPrefix(line, "Geom Title="):
+			meta.GeomTitle = rightofEquals(line)
 
-		match, err := regexp.MatchString("=", line)
+		case strings.HasPrefix(line, "Program Version="):
+			meta.ProgramVersion = rightofEquals(line)
 
-		if err != nil {
-			errChan <- err
-			return
-		}
-
-		beginDescription, err := regexp.MatchString("BEGIN GEOM DESCRIPTION", line)
-
-		if err != nil {
-			errChan <- err
-			return
-		}
-
-		if match {
-			data := strings.Split(line, "=")
-
-			switch data[0] {
-
-			case "Geom Title":
-				meta.GeomTitle = data[1]
-
-			case "Program Version":
-				meta.ProgramVersion = data[1]
-
-			case "River Reach", "Storage Area":
-				header = false
-
-			}
-
-		} else if header && beginDescription {
-
-			for sc.Scan() {
-				line = sc.Text()
-				endDescription, _ := regexp.MatchString("END GEOM DESCRIPTION", line)
-
-				if endDescription {
-					break
-
-				} else {
-					if line != "" {
-						meta.Description += line + "\n"
-					}
+		case strings.HasPrefix(line, "BEGIN GEOM DESCRIPTION:"):
+			if header {
+				description, err := getDescription(sc)
+				if err != nil {
+					errChan <- err
+					return
 				}
-
+				meta.Description += description
 			}
 
+		case strings.HasPrefix(line, "River Reach="):
+			structures, err := getHydraulicStructureData(sc)
+			if err != nil {
+				errChan <- err
+				return
+			}
+			meta.Structures = append(meta.Structures, structures)
+			header = false
+
+		case strings.HasPrefix(line, "Storage Area="):
+			header = false
 		}
 	}
-
 	rm.Metadata.GeomFiles = append(rm.Metadata.GeomFiles, meta)
 	return
 }
@@ -131,10 +182,6 @@ type xyzPoint struct {
 	x float64
 	y float64
 	z float64
-}
-
-func rightofEquals(line string) string {
-	return strings.TrimSpace(strings.Split(line, "=")[1])
 }
 
 func dataPairsfromTextBlock(sc *bufio.Scanner, nPairs int, colWidth int, valueWidth int) ([][2]float64, error) {
