@@ -18,40 +18,84 @@ import (
 // GeomFileContents keywords  and data container for ras flow file search
 type GeomFileContents struct {
 	Path           string
-	FileExt        string                //`json:"File Extension"`
-	GeomTitle      string                //`json:"Geom Title"`
-	ProgramVersion string                //`json:"Program Version"`
-	Description    string                //`json:"Description"`
-	Structures     []hydraulicStructures //`json:"Hydraulic Structures"`
+	FileExt        string                `json:"File Extension"`
+	GeomTitle      string                `json:"Geom Title"`
+	ProgramVersion string                `json:"Program Version"`
+	Description    string                `json:"Description"`
+	Structures     []hydraulicStructures `json:"Hydraulic Structures"`
 }
 
 type hydraulicStructures struct {
-	River       string     //`json:"River Name"`
-	Reach       string     //`json:"Reach Name"`
-	NumXS       int        //`json:"N CrossSections"`
-	NumCulverts int        //`json:"N Culverts"`
-	BridgeData  bridgeData //`json:"Bridges"`
-	NumInlines  int        //`json:"N Inlines"`
+	River       string     `json:"River Name"`
+	Reach       string     `json:"Reach Name"`
+	NumXS       int        `json:"Num CrossSections"`
+	NumCulverts int        `json:"Num Culverts"`
+	BridgeData  bridgeData `json:"Bridges"`
+	NumInlines  int        `json:"Num Inlines"`
 }
 
 type bridgeData struct {
-	NumBridges int       //`json:"Num Bridges"`
-	Bridges    []bridges //`json:"Num Bridges"`
+	NumBridges int       `json:"Num Bridges"`
+	Bridges    []bridges `json:"Bridges"`
 }
 
 type bridges struct {
-	Name string
+	Name          string
+	Station       int
+	Description   string
+	DeckWidth     float64    `json:"Deck Width"`
+	UpHighChord   chordPairs `json:"Upstream High Chord"`
+	UpLowChord    chordPairs `json:"Upstream Low Chord"`
+	DownHighChord chordPairs `json:"Downstream High Chord"`
+	DownLowChord  chordPairs `json:"Downstream Max Chord"`
+	NumPiers      int        `json:"Num Piers"`
+}
+
+type chordPairs struct {
+	Max float64
+	Min float64
+}
+
+func minValue(values []float64) (float64, error) {
+	if len(values) == 0 {
+		return 0.0, errors.New("Cannot detect a minimum value in an empty slice")
+	}
+
+	min := values[0]
+	for _, v := range values {
+		if v < min {
+			min = v
+		}
+	}
+
+	return min, nil
+}
+
+func maxValue(values []float64) (float64, error) {
+	if len(values) == 0 {
+		return 0.0, errors.New("Cannot detect a maximum value in an empty slice")
+	}
+
+	max := values[0]
+	for _, v := range values {
+		if v > max {
+			max = v
+		}
+	}
+
+	return max, nil
 }
 
 func rightofEquals(line string) string {
 	return strings.TrimSpace(strings.Split(line, "=")[1])
 }
 
-func getDescription(sc *bufio.Scanner) (string, error) {
+func getDescription(sc *bufio.Scanner, endLine string) (string, error) {
 	description := ""
+	nLines := 0
 	for sc.Scan() {
 		line := sc.Text()
-		endDescription, err := regexp.MatchString("END GEOM DESCRIPTION", line)
+		endDescription, err := regexp.MatchString(endLine, line)
 		if err != nil {
 			return description, err
 		}
@@ -59,10 +103,154 @@ func getDescription(sc *bufio.Scanner) (string, error) {
 			return description, nil
 		}
 		if line != "" {
-			description += line + "\n"
+			if nLines > 0 {
+				description += "\n"
+			}
+			description += line
+			nLines++
 		}
 	}
 	return description, nil
+}
+func numberofLines(nValues int, colWidth int, valueWidth int) int {
+	nLines := math.Ceil(float64(nValues) / (float64(colWidth) / float64(valueWidth)))
+	return int(nLines)
+}
+
+func datafromTextBlock(sc *bufio.Scanner, colWidth int, valueWidth int, nLines int, nSkipLines int) ([]float64, error) {
+	values := []float64{}
+	nSkipped := 0
+	nProcessed := 0
+out:
+	for sc.Scan() {
+		if nSkipped < nSkipLines {
+			nSkipped++
+			continue
+		}
+		nProcessed++
+		line := sc.Text()
+		for s := 0; s < colWidth; {
+			if len(line) > s {
+				sVal := strings.TrimSpace(line[s : s+valueWidth])
+				if sVal != "" {
+					val, err := strconv.ParseFloat(sVal, 64)
+					if err != nil {
+						return values, err
+					}
+					values = append(values, val)
+				}
+				s += valueWidth
+			} else {
+				if nLines == nProcessed {
+					break out
+				}
+				break
+			}
+
+		}
+		if nLines == nProcessed {
+			break out
+		}
+	}
+	return values, nil
+}
+
+func getHighLowChord(sc *bufio.Scanner, nElevsText string, colWidth int, valueWidth int) ([2]chordPairs, error) {
+	highLowPairs := [2]chordPairs{}
+
+	nElevs, err := strconv.Atoi(strings.TrimSpace(nElevsText))
+	if err != nil {
+		return highLowPairs, err
+	}
+
+	nLines := numberofLines(nElevs, colWidth, valueWidth)
+
+	elevHighChord, err := datafromTextBlock(sc, colWidth, valueWidth, nLines, nLines)
+	if err != nil {
+		return highLowPairs, err
+	}
+
+	maxHighCord, err := maxValue(elevHighChord)
+	if err != nil {
+		return highLowPairs, err
+	}
+
+	minHighCord, err := minValue(elevHighChord)
+	if err != nil {
+		return highLowPairs, err
+	}
+	highLowPairs[0] = chordPairs{Max: maxHighCord, Min: minHighCord}
+
+	elevLowChord, err := datafromTextBlock(sc, 80, 8, nLines, 0)
+	if err != nil {
+		return highLowPairs, err
+	}
+
+	maxLowCord, err := maxValue(elevLowChord)
+	if err != nil {
+		return highLowPairs, err
+	}
+
+	minLowCord, err := minValue(elevLowChord)
+	if err != nil {
+		return highLowPairs, err
+	}
+	highLowPairs[1] = chordPairs{Max: maxLowCord, Min: minLowCord}
+
+	return highLowPairs, nil
+}
+
+func getBridgeData(sc *bufio.Scanner, lineData []string) (bridges, error) {
+	bridge := bridges{}
+	station, err := strconv.Atoi(strings.TrimSpace(lineData[1]))
+	if err != nil {
+		return bridge, err
+	}
+	bridge.Station = station
+
+	for sc.Scan() {
+		line := sc.Text()
+		switch {
+		case strings.HasPrefix(line, "BEGIN DESCRIPTION"):
+			description, err := getDescription(sc, "END DESCRIPTION:")
+			if err != nil {
+				return bridge, err
+			}
+			bridge.Description += description
+
+		case strings.HasPrefix(line, "Node Name="):
+			bridge.Name = rightofEquals(line)
+
+		case strings.HasPrefix(line, "Deck Dist"):
+			sc.Scan()
+			nextLineData := strings.Split(sc.Text(), ",")
+			deckWidth, err := strconv.ParseFloat(strings.TrimSpace(nextLineData[0]), 64)
+			if err != nil {
+				return bridge, err
+			}
+			bridge.DeckWidth = deckWidth
+			upHighLowPair, err := getHighLowChord(sc, nextLineData[4], 80, 8)
+			if err != nil {
+				return bridge, err
+			}
+			bridge.UpHighChord = upHighLowPair[0]
+			bridge.UpLowChord = upHighLowPair[1]
+
+			downHighLowPair, err := getHighLowChord(sc, nextLineData[5], 80, 8)
+			if err != nil {
+				return bridge, err
+			}
+			bridge.DownHighChord = downHighLowPair[0]
+			bridge.DownLowChord = downHighLowPair[1]
+
+		case strings.HasPrefix(line, "Pier Skew"):
+			bridge.NumPiers++
+
+		case strings.HasPrefix(line, "BR Coef"):
+			return bridge, err
+		}
+	}
+	return bridge, nil
 }
 
 func getHydraulicStructureData(sc *bufio.Scanner) (hydraulicStructures, error) {
@@ -85,6 +273,11 @@ func getHydraulicStructureData(sc *bufio.Scanner) (hydraulicStructures, error) {
 				structures.NumCulverts++
 
 			case 3:
+				bridge, err := getBridgeData(sc, data)
+				if err != nil {
+					return structures, err
+				}
+				bData.Bridges = append(bData.Bridges, bridge)
 				bData.NumBridges++
 
 			case 5:
@@ -125,7 +318,7 @@ func getGeomData(rm *RasModel, fn string, wg *sync.WaitGroup, errChan chan error
 
 		case strings.HasPrefix(line, "BEGIN GEOM DESCRIPTION:"):
 			if header {
-				description, err := getDescription(sc)
+				description, err := getDescription(sc, "END GEOM DESCRIPTION:")
 				if err != nil {
 					errChan <- err
 					return
@@ -201,7 +394,7 @@ out:
 					return pairs, err
 				}
 				pairs = append(pairs, [2]float64{val1, val2})
-				if int(len(pairs)) == nPairs {
+				if len(pairs) == nPairs {
 					break out
 				}
 			} else {
