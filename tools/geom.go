@@ -222,17 +222,17 @@ findLineSegment:
 		default:
 			continue
 		}
-
 	}
-
+	if d >= lineLength {
+		if d-lineLength <= 0.1 {
+			return xyPairs[len(xyPairs)-1]
+		}
+		fmt.Printf("The interpolated point has a station of %v while the xy line is %v long", d, lineLength)
+	}
 	return newPoint
 }
 
 // attributeZ using station from cross-section line and gis coordinates
-// Minor bug here caused (I think) where interpolating
-// a station beyond the length of the cutline occurs resulting
-// in a point (0,0). Need to add improved error handling for this.
-// For now don't add stations/elevations longer than the GIS line
 func attributeZ(xyPairs [][2]float64, mzPairs [][2]float64) []xyzPoint {
 	points := []xyzPoint{}
 	startingStation := mzPairs[0][0]
@@ -240,6 +240,8 @@ func attributeZ(xyPairs [][2]float64, mzPairs [][2]float64) []xyzPoint {
 		newPoint := interpXY(xyPairs, mzPair[0]-startingStation)
 		if newPoint[0] != 0 && newPoint[1] != 0 {
 			points = append(points, xyzPoint{newPoint[0], newPoint[1], mzPair[1]})
+		} else {
+			fmt.Printf("Interpolated point has an xy value of (%v, %v). ", newPoint[0], newPoint[1])
 		}
 	}
 	return points
