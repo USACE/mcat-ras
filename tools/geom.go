@@ -41,7 +41,7 @@ type bridgeData struct {
 
 type bridges struct {
 	Name          string
-	Station       int
+	Station       float64
 	Description   string
 	DeckWidth     float64    `json:"Deck Width"`
 	UpHighChord   chordPairs `json:"Upstream High Chord"`
@@ -54,21 +54,6 @@ type bridges struct {
 type chordPairs struct {
 	Max float64
 	Min float64
-}
-
-func minValue(values []float64) (float64, error) {
-	if len(values) == 0 {
-		return 0.0, errors.New("Cannot detect a minimum value in an empty slice")
-	}
-
-	min := values[0]
-	for _, v := range values {
-		if v < min {
-			min = v
-		}
-	}
-
-	return min, nil
 }
 
 func maxValue(values []float64) (float64, error) {
@@ -86,21 +71,37 @@ func maxValue(values []float64) (float64, error) {
 	return max, nil
 }
 
+func minValue(values []float64) (float64, error) {
+	if len(values) == 0 {
+		return 0.0, errors.New("Cannot detect a minimum value in an empty slice")
+	}
+
+	min := values[0]
+	for _, v := range values {
+		if v < min {
+			min = v
+		}
+	}
+
+	return min, nil
+}
+
 func rightofEquals(line string) string {
 	return strings.TrimSpace(strings.Split(line, "=")[1])
 }
 
-func getDescription(sc *bufio.Scanner, endLine string) (string, error) {
+func getDescription(sc *bufio.Scanner, idx int, endLine string) (string, int, error) {
 	description := ""
 	nLines := 0
 	for sc.Scan() {
 		line := sc.Text()
+		idx++
 		endDescription, err := regexp.MatchString(endLine, line)
 		if err != nil {
-			return description, err
+			return description, idx, err
 		}
 		if endDescription {
-			return description, nil
+			return description, idx, nil
 		}
 		if line != "" {
 			if nLines > 0 {
@@ -110,25 +111,25 @@ func getDescription(sc *bufio.Scanner, endLine string) (string, error) {
 			nLines++
 		}
 	}
-	return description, nil
+	return description, idx, nil
 }
 func numberofLines(nValues int, colWidth int, valueWidth int) int {
 	nLines := math.Ceil(float64(nValues) / (float64(colWidth) / float64(valueWidth)))
 	return int(nLines)
 }
 
-func datafromTextBlock(sc *bufio.Scanner, colWidth int, valueWidth int, nLines int, nSkipLines int) ([]float64, error) {
+func datafromTextBlock(hsSc *bufio.Scanner, colWidth int, valueWidth int, nLines int, nSkipLines int) ([]float64, error) {
 	values := []float64{}
 	nSkipped := 0
 	nProcessed := 0
 out:
-	for sc.Scan() {
+	for hsSc.Scan() {
 		if nSkipped < nSkipLines {
 			nSkipped++
 			continue
 		}
 		nProcessed++
-		line := sc.Text()
+		line := hsSc.Text()
 		for s := 0; s < colWidth; {
 			if len(line) > s {
 				sVal := strings.TrimSpace(line[s : s+valueWidth])
@@ -155,7 +156,7 @@ out:
 	return values, nil
 }
 
-func getHighLowChord(sc *bufio.Scanner, nElevsText string, colWidth int, valueWidth int) ([2]chordPairs, error) {
+func getHighLowChord(hsSc *bufio.Scanner, nElevsText string, colWidth int, valueWidth int) ([2]chordPairs, error) {
 	highLowPairs := [2]chordPairs{}
 
 	nElevs, err := strconv.Atoi(strings.TrimSpace(nElevsText))
@@ -165,7 +166,7 @@ func getHighLowChord(sc *bufio.Scanner, nElevsText string, colWidth int, valueWi
 
 	nLines := numberofLines(nElevs, colWidth, valueWidth)
 
-	elevHighChord, err := datafromTextBlock(sc, colWidth, valueWidth, nLines, nLines)
+	elevHighChord, err := datafromTextBlock(hsSc, colWidth, valueWidth, nLines, nLines)
 	if err != nil {
 		return highLowPairs, err
 	}
@@ -181,7 +182,7 @@ func getHighLowChord(sc *bufio.Scanner, nElevsText string, colWidth int, valueWi
 	}
 	highLowPairs[0] = chordPairs{Max: maxHighCord, Min: minHighCord}
 
-	elevLowChord, err := datafromTextBlock(sc, 80, 8, nLines, 0)
+	elevLowChord, err := datafromTextBlock(hsSc, 80, 8, nLines, 0)
 	if err != nil {
 		return highLowPairs, err
 	}
@@ -196,23 +197,23 @@ func getHighLowChord(sc *bufio.Scanner, nElevsText string, colWidth int, valueWi
 		return highLowPairs, err
 	}
 	highLowPairs[1] = chordPairs{Max: maxLowCord, Min: minLowCord}
-
 	return highLowPairs, nil
 }
 
-func getBridgeData(sc *bufio.Scanner, lineData []string) (bridges, error) {
+func getBridgeData(hsSc *bufio.Scanner, lineData []string) (bridges, error) {
 	bridge := bridges{}
-	station, err := strconv.Atoi(strings.TrimSpace(lineData[1]))
+
+	station, err := strconv.ParseFloat(strings.TrimSpace(lineData[1]), 64)
 	if err != nil {
 		return bridge, err
 	}
 	bridge.Station = station
 
-	for sc.Scan() {
-		line := sc.Text()
+	for hsSc.Scan() {
+		line := hsSc.Text()
 		switch {
 		case strings.HasPrefix(line, "BEGIN DESCRIPTION"):
-			description, err := getDescription(sc, "END DESCRIPTION:")
+			description, _, err := getDescription(hsSc, 0, "END DESCRIPTION:")
 			if err != nil {
 				return bridge, err
 			}
@@ -222,21 +223,21 @@ func getBridgeData(sc *bufio.Scanner, lineData []string) (bridges, error) {
 			bridge.Name = rightofEquals(line)
 
 		case strings.HasPrefix(line, "Deck Dist"):
-			sc.Scan()
-			nextLineData := strings.Split(sc.Text(), ",")
+			hsSc.Scan()
+			nextLineData := strings.Split(hsSc.Text(), ",")
 			deckWidth, err := strconv.ParseFloat(strings.TrimSpace(nextLineData[0]), 64)
 			if err != nil {
 				return bridge, err
 			}
 			bridge.DeckWidth = deckWidth
-			upHighLowPair, err := getHighLowChord(sc, nextLineData[4], 80, 8)
+			upHighLowPair, err := getHighLowChord(hsSc, nextLineData[4], 80, 8)
 			if err != nil {
 				return bridge, err
 			}
 			bridge.UpHighChord = upHighLowPair[0]
 			bridge.UpLowChord = upHighLowPair[1]
 
-			downHighLowPair, err := getHighLowChord(sc, nextLineData[5], 80, 8)
+			downHighLowPair, err := getHighLowChord(hsSc, nextLineData[5], 80, 8)
 			if err != nil {
 				return bridge, err
 			}
@@ -253,40 +254,61 @@ func getBridgeData(sc *bufio.Scanner, lineData []string) (bridges, error) {
 	return bridge, nil
 }
 
-func getHydraulicStructureData(sc *bufio.Scanner) (hydraulicStructures, error) {
-	riverReach := strings.Split(rightofEquals(sc.Text()), ",")
-	structures := hydraulicStructures{River: strings.TrimSpace(riverReach[0]), Reach: strings.TrimSpace(riverReach[1])}
+func getHydraulicStructureData(rm *RasModel, fn string, idx int) (hydraulicStructures, error) {
+	structures := hydraulicStructures{}
 	bData := bridgeData{}
-	for sc.Scan() {
-		line := sc.Text()
-		if strings.HasPrefix(line, "Type RM Length L Ch R =") {
-			data := strings.Split(rightofEquals(line), ",")
-			structureType, err := strconv.Atoi(strings.TrimSpace(data[0]))
-			if err != nil {
-				return structures, err
+
+	newf, err := rm.FileStore.GetObject(fn)
+	if err != nil {
+		return structures, nil
+	}
+	defer newf.Close()
+
+	hsSc := bufio.NewScanner(newf)
+
+	i := 0
+	for hsSc.Scan() {
+		if i == idx {
+			riverReach := strings.Split(rightofEquals(hsSc.Text()), ",")
+			structures.River = strings.TrimSpace(riverReach[0])
+			structures.Reach = strings.TrimSpace(riverReach[1])
+		} else if i > idx {
+			line := hsSc.Text()
+			if strings.HasPrefix(line, "River Reach=") {
+				structures.BridgeData = bData
+				return structures, nil
 			}
-			switch structureType {
-			case 1:
-				structures.NumXS++
-
-			case 2:
-				structures.NumCulverts++
-
-			case 3:
-				bridge, err := getBridgeData(sc, data)
+			if strings.HasPrefix(line, "Type RM Length L Ch R =") {
+				data := strings.Split(rightofEquals(line), ",")
+				structureType, err := strconv.Atoi(strings.TrimSpace(data[0]))
 				if err != nil {
 					return structures, err
 				}
-				bData.Bridges = append(bData.Bridges, bridge)
-				bData.NumBridges++
+				switch structureType {
+				case 1:
+					structures.NumXS++
 
-			case 5:
-				structures.NumInlines++
+				case 2:
+					structures.NumCulverts++
 
+				case 3:
+					bridge, err := getBridgeData(hsSc, data)
+					if err != nil {
+						return structures, err
+					}
+					bData.Bridges = append(bData.Bridges, bridge)
+					bData.NumBridges++
+
+				case 5:
+					structures.NumInlines++
+
+				}
 			}
 		}
+		i++
 	}
 	structures.BridgeData = bData
+
 	return structures, nil
 }
 
@@ -305,10 +327,13 @@ func getGeomData(rm *RasModel, fn string, wg *sync.WaitGroup, errChan chan error
 	defer f.Close()
 
 	sc := bufio.NewScanner(f)
-	var line string
+
+	var description string
+
 	header := true
+	idx := 0
 	for sc.Scan() {
-		line = sc.Text()
+		line := sc.Text()
 		switch {
 		case strings.HasPrefix(line, "Geom Title="):
 			meta.GeomTitle = rightofEquals(line)
@@ -318,7 +343,7 @@ func getGeomData(rm *RasModel, fn string, wg *sync.WaitGroup, errChan chan error
 
 		case strings.HasPrefix(line, "BEGIN GEOM DESCRIPTION:"):
 			if header {
-				description, err := getDescription(sc, "END GEOM DESCRIPTION:")
+				description, idx, err = getDescription(sc, idx, "END GEOM DESCRIPTION:")
 				if err != nil {
 					errChan <- err
 					return
@@ -327,7 +352,7 @@ func getGeomData(rm *RasModel, fn string, wg *sync.WaitGroup, errChan chan error
 			}
 
 		case strings.HasPrefix(line, "River Reach="):
-			structures, err := getHydraulicStructureData(sc)
+			structures, err := getHydraulicStructureData(rm, fn, idx)
 			if err != nil {
 				errChan <- err
 				return
@@ -338,6 +363,7 @@ func getGeomData(rm *RasModel, fn string, wg *sync.WaitGroup, errChan chan error
 		case strings.HasPrefix(line, "Storage Area="):
 			header = false
 		}
+		idx++
 	}
 	rm.Metadata.GeomFiles = append(rm.Metadata.GeomFiles, meta)
 	return
