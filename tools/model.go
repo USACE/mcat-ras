@@ -21,6 +21,7 @@ type fileExtMatchers struct {
 	SteadyRun   *regexp.Regexp
 	UnsteadyRun *regexp.Regexp
 	AllFlowRun  *regexp.Regexp
+	Projection  *regexp.Regexp
 }
 
 var rasRE fileExtMatchers = fileExtMatchers{ // Maybe these ones are better? need a regex experts opinion
@@ -34,13 +35,15 @@ var rasRE fileExtMatchers = fileExtMatchers{ // Maybe these ones are better? nee
 	SteadyRun:   regexp.MustCompile(".r[0-9][0-9]"),     // `^\.r(0[1-9]|[1-9][0-9])$`
 	UnsteadyRun: regexp.MustCompile(".x[0-9][0-9]"),     // `^\.x(0[1-9]|[1-9][0-9])$`
 	AllFlowRun:  regexp.MustCompile(".[rx][0-9][0-9]"),  // `^\.[rx](0[1-9]|[1-9][0-9])$`
+	Projection:  regexp.MustCompile(".projection"),
 }
 
 // holder of multiple wait groups to help process files concurrency
 type rasWaitGroup struct {
-	Geom sync.WaitGroup
-	Plan sync.WaitGroup
-	Flow sync.WaitGroup
+	Geom       sync.WaitGroup
+	Plan       sync.WaitGroup
+	Flow       sync.WaitGroup
+	Projection sync.WaitGroup
 }
 
 // Model is a general type should contain all necessary data for a model of any type.
@@ -188,12 +191,15 @@ func (rm *RasModel) Index() (Model, error) {
 	return mod, nil
 }
 
+var destinationCRS int = 4326
+
 // GeospatialData ...
 func (rm *RasModel) GeospatialData() (GeoData, error) {
-	gd := GeoData{Features: make(map[string]Features), Georeference: DestinationCRS}
+	gd := GeoData{Features: make(map[string]Features), Georeference: destinationCRS}
 
+	sourceCRS := rm.Metadata.Projection
 	for _, g := range rm.Metadata.GeomFiles {
-		if err := GetGeospatialData(&gd, rm.FileStore, g.Path); err != nil {
+		if err := GetGeospatialData(&gd, rm.FileStore, g.Path, sourceCRS, destinationCRS); err != nil {
 			return gd, err
 		}
 	}
@@ -238,6 +244,7 @@ func NewRasModel(key string, fs filestore.FileStore) (*RasModel, error) {
 	errChan := make(chan error)
 	var rasWG rasWaitGroup
 
+	nProjection := 0
 	for _, fp := range rm.FileList {
 
 		ext := filepath.Ext(fp)
@@ -256,12 +263,21 @@ func NewRasModel(key string, fs filestore.FileStore) (*RasModel, error) {
 			rasWG.Flow.Add(1)
 			go getFlowData(&rm, fp, &rasWG.Flow, errChan)
 
+		case rasRE.Projection.MatchString(ext):
+			if nProjection > 0 {
+				return &rm, errors.New("multiple projection files identified")
+			}
+			rasWG.Projection.Add(1)
+			go getProjection(&rm, fp, &rasWG.Projection, errChan)
+			nProjection++
+
 		}
 	}
 
 	rasWG.Plan.Wait()
 	rasWG.Geom.Wait()
 	rasWG.Flow.Wait()
+	rasWG.Projection.Wait()
 
 	if len(errChan) > 0 {
 		fmt.Printf("Encountered %d errors\n", len(errChan))

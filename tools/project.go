@@ -17,6 +17,7 @@ type ProjectMetadata struct {
 	PlanFiles        []PlanFileContents //`json:"Plan Data"`
 	FlowFiles        []FlowFileContents //`json:"Flow Data"`
 	GeomFiles        []GeomFileContents //`json:"Geometry Data"`
+	Projection       string             //`json:"Projection"`
 	Notes            string             //`json:"Notes"`
 }
 

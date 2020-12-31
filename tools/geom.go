@@ -369,11 +369,28 @@ func getGeomData(rm *RasModel, fn string, wg *sync.WaitGroup, errChan chan error
 	return
 }
 
-// sourceCRS
-var sourceCRS string = `PROJCS["NAD_1983_StatePlane_Maryland_FIPS_1900_Feet",GEOGCS["GCS_North_American_1983",DATUM["D_North_American_1983",SPHEROID["GRS_1980",6378137.0,298.257222101]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]],PROJECTION["Lambert_Conformal_Conic"],PARAMETER["False_Easting",1312333.333333333],PARAMETER["False_Northing",0.0],PARAMETER["Central_Meridian",-77.0],PARAMETER["Standard_Parallel_1",38.3],PARAMETER["Standard_Parallel_2",39.45],PARAMETER["Latitude_Of_Origin",37.66666666666666],UNIT["Foot_US",0.3048006096012192]]`
+// getProjection Reads a projection file. returns none to allow concurrency
+func getProjection(rm *RasModel, fn string, wg *sync.WaitGroup, errChan chan error) {
 
-// DestinationCRS ...
-var DestinationCRS int = 4326
+	defer wg.Done()
+
+	f, err := rm.FileStore.GetObject(fn)
+	if err != nil {
+		errChan <- err
+		return
+	}
+	defer f.Close()
+	sc := bufio.NewScanner(f)
+	sc.Scan()
+	line := sc.Text()
+	if strings.HasPrefix(line, "PROJCS[") {
+		rm.Metadata.Projection = line
+		return
+	}
+
+	errChan <- errors.New("Unexpected projection file structure")
+	return
+}
 
 // GeoData ...
 type GeoData struct {
@@ -511,16 +528,16 @@ func attributeZ(xyPairs [][2]float64, mzPairs [][2]float64) []xyzPoint {
 	return points
 }
 
-func getTransform(sourceProjection string, destinationEPSG int) (gdal.CoordinateTransform, error) {
+func getTransform(sourceCRS string, destinationCRS int) (gdal.CoordinateTransform, error) {
 	transform := gdal.CoordinateTransform{}
-	sourceSpRef := gdal.CreateSpatialReference(sourceProjection)
+	sourceSpRef := gdal.CreateSpatialReference(sourceCRS)
 	sourceSpRef.MorphFromESRI()
 	if err := sourceSpRef.Validate(); err != nil {
 		return transform, errors.New("Unable to extract geospatial data. Invalid source Projection")
 	}
 
 	destinationSpRef := gdal.CreateSpatialReference("")
-	if err := destinationSpRef.FromEPSG(destinationEPSG); err != nil {
+	if err := destinationSpRef.FromEPSG(destinationCRS); err != nil {
 		return transform, err
 	}
 	transform = gdal.CreateCoordinateTransform(sourceSpRef, destinationSpRef)
@@ -711,7 +728,7 @@ func getStorageArea(sc *bufio.Scanner, transform gdal.CoordinateTransform) (vect
 }
 
 // GetGeospatialData ...
-func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string) error {
+func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string, sourceCRS string, destinationCRS int) error {
 	geomFileName := filepath.Base(geomFilePath)
 	f := Features{}
 	riverReachName := ""
@@ -724,7 +741,7 @@ func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string)
 
 	sc := bufio.NewScanner(file)
 
-	transform, err := getTransform(sourceCRS, DestinationCRS)
+	transform, err := getTransform(sourceCRS, destinationCRS)
 	if err != nil {
 		return err
 	}
