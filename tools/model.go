@@ -202,7 +202,7 @@ func (rm *RasModel) Index() (Model, error) {
 
 // GeospatialData ...
 func (rm *RasModel) GeospatialData(destinationCRS int) (GeoData, error) {
-	gd := GeoData{Features: make(map[string]features), Georeference: destinationCRS}
+	gd := GeoData{Features: make(map[string]Features), Georeference: destinationCRS}
 
 	sourceCRS := rm.Metadata.Projection
 	for _, g := range rm.Metadata.GeomFiles {

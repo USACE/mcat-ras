@@ -15,20 +15,22 @@ import (
 
 // GeoData ...
 type GeoData struct {
-	Features     map[string]features
+	Features     map[string]Features
 	Georeference int
 }
 
-type features struct {
-	Rivers              []vectorLayer
-	XS                  []vectorLayer
-	Banks               []vectorLayer
-	StorageAreas        []vectorLayer
-	TwoDAreas           []vectorLayer
-	HydraulicStructures []vectorLayer
+// Features ...
+type Features struct {
+	Rivers              []VectorLayer
+	XS                  []VectorLayer
+	Banks               []VectorLayer
+	StorageAreas        []VectorLayer
+	TwoDAreas           []VectorLayer
+	HydraulicStructures []VectorLayer
 }
 
-type vectorLayer struct {
+// VectorLayer ...
+type VectorLayer struct {
 	FeatureName string                 `json:"feature_name"`
 	Fields      map[string]interface{} `json:"fields"`
 	Geometry    []uint8                `json:"geometry"`
@@ -210,9 +212,9 @@ func flipXYPoint(xyPoint gdal.Geometry) gdal.Geometry {
 	return yxPoint
 }
 
-func getRiverCenterline(sc *bufio.Scanner, transform gdal.CoordinateTransform) (vectorLayer, error) {
+func getRiverCenterline(sc *bufio.Scanner, transform gdal.CoordinateTransform) (VectorLayer, error) {
 	riverReach := strings.Split(rightofEquals(sc.Text()), ",")
-	layer := vectorLayer{FeatureName: fmt.Sprintf("%s, %s", strings.TrimSpace(riverReach[0]), strings.TrimSpace(riverReach[1]))}
+	layer := VectorLayer{FeatureName: fmt.Sprintf("%s, %s", strings.TrimSpace(riverReach[0]), strings.TrimSpace(riverReach[1]))}
 
 	xyPairs, err := getDataPairsfromTextBlock("Reach XY=", sc, 64, 16)
 	if err != nil {
@@ -237,8 +239,8 @@ func getRiverCenterline(sc *bufio.Scanner, transform gdal.CoordinateTransform) (
 	return layer, err
 }
 
-func getXSBanks(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReachName string) (vectorLayer, []vectorLayer, error) {
-	bankLayers := []vectorLayer{}
+func getXSBanks(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReachName string) (VectorLayer, []VectorLayer, error) {
+	bankLayers := []VectorLayer{}
 
 	xsLayer, xyPairs, startingStation, err := getXS(sc, transform, riverReachName)
 	if err != nil {
@@ -257,9 +259,9 @@ func getXSBanks(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReac
 	return xsLayer, bankLayers, err
 }
 
-func getXS(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReachName string) (vectorLayer, [][2]float64, float64, error) {
+func getXS(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReachName string) (VectorLayer, [][2]float64, float64, error) {
 	compData := strings.Split(rightofEquals(sc.Text()), ",")
-	layer := vectorLayer{FeatureName: strings.TrimSpace(compData[1]), Fields: map[string]interface{}{}}
+	layer := VectorLayer{FeatureName: strings.TrimSpace(compData[1]), Fields: map[string]interface{}{}}
 	layer.Fields["RiverReachName"] = riverReachName
 
 	xyPairs, err := getDataPairsfromTextBlock("XS GIS Cut Line", sc, 64, 16)
@@ -292,12 +294,12 @@ func getXS(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReachName
 	return layer, xyPairs, mzPairs[0][0], err
 }
 
-func getBanks(line string, transform gdal.CoordinateTransform, xsLayer vectorLayer, xyPairs [][2]float64, startingStation float64) ([]vectorLayer, error) {
-	layers := []vectorLayer{}
+func getBanks(line string, transform gdal.CoordinateTransform, xsLayer VectorLayer, xyPairs [][2]float64, startingStation float64) ([]VectorLayer, error) {
+	layers := []VectorLayer{}
 
 	bankStations := strings.Split(rightofEquals(line), ",")
 	for _, s := range bankStations {
-		layer := vectorLayer{FeatureName: strings.TrimSpace(s), Fields: map[string]interface{}{}}
+		layer := VectorLayer{FeatureName: strings.TrimSpace(s), Fields: map[string]interface{}{}}
 		layer.Fields["RiverReachName"] = xsLayer.Fields["RiverReachName"]
 		layer.Fields["xsName"] = xsLayer.FeatureName
 		bankStation, err := strconv.ParseFloat(s, 64)
@@ -321,8 +323,8 @@ func getBanks(line string, transform gdal.CoordinateTransform, xsLayer vectorLay
 	return layers, nil
 }
 
-func getStorageArea(sc *bufio.Scanner, transform gdal.CoordinateTransform) (vectorLayer, error) {
-	layer := vectorLayer{FeatureName: strings.TrimSpace(strings.Split(rightofEquals(sc.Text()), ",")[0])}
+func getStorageArea(sc *bufio.Scanner, transform gdal.CoordinateTransform) (VectorLayer, error) {
+	layer := VectorLayer{FeatureName: strings.TrimSpace(strings.Split(rightofEquals(sc.Text()), ",")[0])}
 
 	xyPairs, err := getDataPairsfromTextBlock("Storage Area Surface Line=", sc, 32, 16)
 	if err != nil {
@@ -352,7 +354,7 @@ func getStorageArea(sc *bufio.Scanner, transform gdal.CoordinateTransform) (vect
 // GetGeospatialData ...
 func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string, sourceCRS string, destinationCRS int) error {
 	geomFileName := filepath.Base(geomFilePath)
-	f := features{}
+	f := Features{}
 	riverReachName := ""
 
 	file, err := fs.GetObject(geomFilePath)
