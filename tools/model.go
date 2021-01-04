@@ -191,10 +191,8 @@ func (rm *RasModel) Index() (Model, error) {
 	return mod, nil
 }
 
-var destinationCRS int = 4326
-
 // GeospatialData ...
-func (rm *RasModel) GeospatialData() (GeoData, error) {
+func (rm *RasModel) GeospatialData(destinationCRS int) (GeoData, error) {
 	gd := GeoData{Features: make(map[string]Features), Georeference: destinationCRS}
 
 	sourceCRS := rm.Metadata.Projection

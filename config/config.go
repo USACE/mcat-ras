@@ -8,9 +8,10 @@ import (
 )
 
 type APIConfig struct {
-	Host      string
-	Port      int
-	FileStore *filestore.FileStore
+	Host           string
+	Port           int
+	FileStore      *filestore.FileStore
+	DestinationCRS int
 }
 
 // Address tells the application where to run the api out of
@@ -24,6 +25,7 @@ func Init() *APIConfig {
 	config.Host = "" // 0.0.0.0
 	config.Port = 5600
 	config.FileStore = FileStoreInit(false)
+	config.DestinationCRS = 4326
 	return config
 }
 
