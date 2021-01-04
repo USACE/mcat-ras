@@ -294,8 +294,9 @@ func NewRasModel(key string, fs filestore.FileStore) (*RasModel, error) {
 		rm.Version += fmt.Sprintf("%s: %s, ", f.FileExt, f.ProgramVersion)
 	}
 
-	rm.Version = rm.Version[0 : len(rm.Version)-2]
-
+	if len(rm.Version) >= 2 {
+		rm.Version = rm.Version[0 : len(rm.Version)-2]
+	}
 	rm.isModel = true
 
 	return &rm, nil

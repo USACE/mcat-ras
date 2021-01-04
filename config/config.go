@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/USACE/filestore"
-	_ "github.com/jackc/pgx/stdlib"
 )
 
 type APIConfig struct {
