@@ -39,7 +39,7 @@ func main() {
 	e.GET("/isgeospatial", handlers.IsGeospatial(appConfig.FileStore))
 	e.GET("/modeltype", handlers.ModelType(appConfig.FileStore))
 	e.GET("/modelversion", handlers.ModelVersion(appConfig.FileStore))
-	e.GET("/geospatialdata", handlers.GeospatialData(appConfig))
+	e.GET("/geospatialdata", handlers.GeospatialData(appConfig.FileStore, appConfig.DestinationCRS))
 
 	e.Logger.Fatal(e.Start(appConfig.Address()))
 }

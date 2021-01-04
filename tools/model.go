@@ -1,10 +1,12 @@
 package tools
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"sync"
 
 	"github.com/USACE/filestore"
@@ -54,6 +56,7 @@ type Model struct {
 	Files          ModelFiles
 }
 
+// ModelFiles ...
 type ModelFiles struct {
 	InputFiles        InputFiles
 	OutputFiles       OutputFiles
@@ -103,6 +106,7 @@ type SupplementalFiles struct {
 	ObservationalData interface{} // placeholder
 }
 
+// RasModel ...
 type RasModel struct {
 	FileStore      filestore.FileStore
 	ModelDirectory string
@@ -113,10 +117,12 @@ type RasModel struct {
 	FileList       []string
 }
 
+// IsAModel ...
 func (rm *RasModel) IsAModel() bool {
 	return rm.isModel
 }
 
+// IsGeospatial ...
 func (rm *RasModel) IsGeospatial() bool {
 	if rm.Metadata.GeomFiles[0].FileExt != "" {
 		return true
@@ -124,14 +130,17 @@ func (rm *RasModel) IsGeospatial() bool {
 	return false
 }
 
+// ModelType ...
 func (rm *RasModel) ModelType() string {
 	return rm.Type
 }
 
+// ModelVersion ...
 func (rm *RasModel) ModelVersion() string {
 	return rm.Version
 }
 
+// Index ...
 func (rm *RasModel) Index() (Model, error) {
 	if !rm.IsAModel() {
 		return Model{}, errors.New("model is not valid")
@@ -193,7 +202,7 @@ func (rm *RasModel) Index() (Model, error) {
 
 // GeospatialData ...
 func (rm *RasModel) GeospatialData(destinationCRS int) (GeoData, error) {
-	gd := GeoData{Features: make(map[string]Features), Georeference: destinationCRS}
+	gd := GeoData{Features: make(map[string]features), Georeference: destinationCRS}
 
 	sourceCRS := rm.Metadata.Projection
 	for _, g := range rm.Metadata.GeomFiles {
@@ -221,6 +230,30 @@ func getModelFiles(rm *RasModel) error {
 	return nil
 }
 
+// getProjection Reads a projection file. returns none to allow concurrency
+func getProjection(rm *RasModel, fn string, wg *sync.WaitGroup, errChan chan error) {
+
+	defer wg.Done()
+
+	f, err := rm.FileStore.GetObject(fn)
+	if err != nil {
+		errChan <- err
+		return
+	}
+	defer f.Close()
+	sc := bufio.NewScanner(f)
+	sc.Scan()
+	line := sc.Text()
+	if strings.HasPrefix(line, "PROJCS[") {
+		rm.Metadata.Projection = line
+		return
+	}
+
+	errChan <- errors.New("Unexpected projection file structure")
+	return
+}
+
+// NewRasModel ...
 func NewRasModel(key string, fs filestore.FileStore) (*RasModel, error) {
 	rm := RasModel{ModelDirectory: filepath.Dir(key), FileStore: fs, Type: "RAS"}
 
