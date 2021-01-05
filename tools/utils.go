@@ -3,7 +3,6 @@ package tools
 import (
 	"bufio"
 	"errors"
-	"regexp"
 	"strings"
 )
 
@@ -47,11 +46,7 @@ func getDescription(sc *bufio.Scanner, idx int, endLine string) (string, int, er
 	for sc.Scan() {
 		line := sc.Text()
 		idx++
-		endDescription, err := regexp.MatchString(endLine, line)
-		if err != nil {
-			return description, idx, err
-		}
-		if endDescription {
+		if strings.HasPrefix(line, endLine) {
 			return description, idx, nil
 		}
 		if line != "" {
