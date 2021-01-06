@@ -2,6 +2,7 @@ package tools
 
 import (
 	"bufio"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -38,6 +39,7 @@ func getGeomData(rm *RasModel, fn string, wg *sync.WaitGroup, errChan chan error
 	header := true
 	idx := 0
 	for sc.Scan() {
+		idx++
 		line := sc.Text()
 		switch {
 		case strings.HasPrefix(line, "Geom Title="):
@@ -59,8 +61,8 @@ func getGeomData(rm *RasModel, fn string, wg *sync.WaitGroup, errChan chan error
 		case strings.HasPrefix(line, "River Reach="):
 			structures, err := getHydraulicStructureData(rm, fn, idx)
 			if err != nil {
-				errChan <- err
-				return
+				fmt.Println(err)
+				continue
 			}
 			meta.Structures = append(meta.Structures, structures)
 			header = false
@@ -68,7 +70,6 @@ func getGeomData(rm *RasModel, fn string, wg *sync.WaitGroup, errChan chan error
 		case strings.HasPrefix(line, "Storage Area="):
 			header = false
 		}
-		idx++
 	}
 	rm.Metadata.GeomFiles = append(rm.Metadata.GeomFiles, meta)
 	return

@@ -44,8 +44,8 @@ func getDescription(sc *bufio.Scanner, idx int, endLine string) (string, int, er
 	description := ""
 	nLines := 0
 	for sc.Scan() {
-		line := sc.Text()
 		idx++
+		line := sc.Text()
 		if strings.HasPrefix(line, endLine) {
 			return description, idx, nil
 		}
