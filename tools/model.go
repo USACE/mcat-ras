@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"sync"
 
 	"github.com/USACE/filestore"
+	"github.com/dewberry/gdal"
 )
 
 type fileExtMatchers struct {
@@ -37,7 +37,7 @@ var rasRE fileExtMatchers = fileExtMatchers{ // Maybe these ones are better? nee
 	SteadyRun:   regexp.MustCompile(".r[0-9][0-9]"),     // `^\.r(0[1-9]|[1-9][0-9])$`
 	UnsteadyRun: regexp.MustCompile(".x[0-9][0-9]"),     // `^\.x(0[1-9]|[1-9][0-9])$`
 	AllFlowRun:  regexp.MustCompile(".[rx][0-9][0-9]"),  // `^\.[rx](0[1-9]|[1-9][0-9])$`
-	Projection:  regexp.MustCompile(".projection"),
+	Projection:  regexp.MustCompile(".pr[oj]"),
 }
 
 // holder of multiple wait groups to help process files concurrency
@@ -209,7 +209,7 @@ func (rm *RasModel) GeospatialData(destinationCRS int) (GeoData, error) {
 	sourceCRS := rm.Metadata.Projection
 
 	if sourceCRS == "" {
-		return gd, errors.New("Cannot extract geospatial data, no coordinate reference system")
+		return gd, errors.New("Cannot extract geospatial data, no valid coordinate reference system")
 	}
 
 	if err := checkUnitConsistency(modelUnits, sourceCRS, unitConsistencyMap); err != nil {
@@ -237,9 +237,7 @@ func getModelFiles(rm *RasModel) error {
 	}
 
 	for _, file := range *files {
-		if filepath.Ext(file.Name) != ".prj" {
-			rm.FileList = append(rm.FileList, filepath.Join(file.Path, file.Name))
-		}
+		rm.FileList = append(rm.FileList, filepath.Join(file.Path, file.Name))
 	}
 
 	return nil
@@ -256,15 +254,23 @@ func getProjection(rm *RasModel, fn string, wg *sync.WaitGroup, errChan chan err
 		return
 	}
 	defer f.Close()
+
 	sc := bufio.NewScanner(f)
 	sc.Scan()
 	line := sc.Text()
-	if strings.HasPrefix(line, "PROJCS[") {
-		rm.Metadata.Projection = line
+
+	sourceSpRef := gdal.CreateSpatialReference(line)
+	if err := sourceSpRef.Validate(); err != nil {
+		rm.Metadata.Projection = ""
+		return
+	}
+	if rm.Metadata.Projection != "" {
+		errChan <- errors.New("Multiple projection files identified, cannot determine coordinate reference system")
 		return
 	}
 
-	errChan <- errors.New("Unexpected projection file structure")
+	rm.Metadata.Projection = line
+
 	return
 }
 
@@ -290,7 +296,6 @@ func NewRasModel(key string, fs filestore.FileStore) (*RasModel, error) {
 	errChan := make(chan error)
 	var rasWG rasWaitGroup
 
-	nProjection := 0
 	for _, fp := range rm.FileList {
 
 		ext := filepath.Ext(fp)
@@ -310,12 +315,10 @@ func NewRasModel(key string, fs filestore.FileStore) (*RasModel, error) {
 			go getFlowData(&rm, fp, &rasWG.Flow, errChan)
 
 		case rasRE.Projection.MatchString(ext):
-			if nProjection > 0 {
-				return &rm, errors.New("multiple projection files identified")
+			if filepath.Base(key) != filepath.Base(fp) {
+				rasWG.Projection.Add(1)
+				go getProjection(&rm, fp, &rasWG.Projection, errChan)
 			}
-			rasWG.Projection.Add(1)
-			go getProjection(&rm, fp, &rasWG.Projection, errChan)
-			nProjection++
 
 		}
 	}

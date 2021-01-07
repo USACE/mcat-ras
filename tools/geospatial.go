@@ -49,10 +49,6 @@ var unitConsistencyMap map[string]string = map[string]string{
 // checkUnitConsistency checks that the unit system used by the model and its coordinate reference system are the same
 func checkUnitConsistency(modelUnits string, sourceCRS string, ucMap map[string]string) error {
 	sourceSpRef := gdal.CreateSpatialReference(sourceCRS)
-	sourceSpRef.MorphFromESRI()
-	if err := sourceSpRef.Validate(); err != nil {
-		return errors.New("Unable to check unit consistency, invalid coordinate reference system")
-	}
 
 	if crsUnits, ok := sourceSpRef.AttrValue("UNIT", 0); ok {
 		if ucMap[modelUnits] == crsUnits {
@@ -176,10 +172,6 @@ func attributeZ(xyPairs [][2]float64, mzPairs [][2]float64) []xyzPoint {
 func getTransform(sourceCRS string, destinationCRS int) (gdal.CoordinateTransform, error) {
 	transform := gdal.CoordinateTransform{}
 	sourceSpRef := gdal.CreateSpatialReference(sourceCRS)
-	sourceSpRef.MorphFromESRI()
-	if err := sourceSpRef.Validate(); err != nil {
-		return transform, errors.New("Unable to extract geospatial data. Invalid source Projection")
-	}
 
 	destinationSpRef := gdal.CreateSpatialReference("")
 	if err := destinationSpRef.FromEPSG(destinationCRS); err != nil {
