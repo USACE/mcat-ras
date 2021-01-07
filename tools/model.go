@@ -202,15 +202,30 @@ func (rm *RasModel) Index() (Model, error) {
 
 // GeospatialData ...
 func (rm *RasModel) GeospatialData(destinationCRS int) (GeoData, error) {
-	gd := GeoData{Features: make(map[string]Features), Georeference: destinationCRS}
+	gd := GeoData{}
+
+	modelUnits := rm.Metadata.ProjFileContents.Units
 
 	sourceCRS := rm.Metadata.Projection
+
+	if sourceCRS == "" {
+		return gd, errors.New("Cannot extract geospatial data, no coordinate reference system")
+	}
+
+	if err := checkUnitConsistency(modelUnits, sourceCRS, unitConsistencyMap); err != nil {
+		return gd, err
+	}
+
+	gd.Features = make(map[string]Features)
+	gd.Georeference = destinationCRS
+
 	for _, g := range rm.Metadata.GeomFiles {
 		if err := GetGeospatialData(&gd, rm.FileStore, g.Path, sourceCRS, destinationCRS); err != nil {
 			return gd, err
 		}
 	}
 	return gd, nil
+
 }
 
 func getModelFiles(rm *RasModel) error {

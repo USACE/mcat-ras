@@ -42,6 +42,27 @@ type xyzPoint struct {
 	z float64
 }
 
+var unitConsistencyMap map[string]string = map[string]string{
+	"English Units": "US survey foot",
+	"SI Units":      "metre"}
+
+// checkUnitConsistency checks that the unit system used by the model and its coordinate reference system are the same
+func checkUnitConsistency(modelUnits string, sourceCRS string, ucMap map[string]string) error {
+	sourceSpRef := gdal.CreateSpatialReference(sourceCRS)
+	sourceSpRef.MorphFromESRI()
+	if err := sourceSpRef.Validate(); err != nil {
+		return errors.New("Unable to check unit consistency, invalid coordinate reference system")
+	}
+
+	if crsUnits, ok := sourceSpRef.AttrValue("UNIT", 0); ok {
+		if ucMap[modelUnits] == crsUnits {
+			return nil
+		}
+		return errors.New("The unit system of the model and coordinate reference system are inconsistent")
+	}
+	return errors.New("Unable to check unit consistency, could not identify the coordinate reference system's units")
+}
+
 func dataPairsfromTextBlock(sc *bufio.Scanner, nPairs int, colWidth int, valueWidth int) ([][2]float64, error) {
 	var stride int = valueWidth * 2
 	pairs := [][2]float64{}
