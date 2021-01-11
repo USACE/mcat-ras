@@ -334,13 +334,22 @@ func NewRasModel(key string, fs filestore.FileStore) (*RasModel, error) {
 	}
 
 	for _, p := range rm.Metadata.PlanFiles {
-		rm.Version += fmt.Sprintf("%s: %s, ", p.FileExt, p.ProgramVersion)
+		version := p.ProgramVersion
+		if version != "" {
+			rm.Version += fmt.Sprintf("%s: %s, ", p.FileExt, version)
+		}
 	}
 	for _, g := range rm.Metadata.GeomFiles {
-		rm.Version += fmt.Sprintf("%s: %s, ", g.FileExt, g.ProgramVersion)
+		version := g.ProgramVersion
+		if version != "" {
+			rm.Version += fmt.Sprintf("%s: %s, ", g.FileExt, version)
+		}
 	}
 	for _, f := range rm.Metadata.FlowFiles {
-		rm.Version += fmt.Sprintf("%s: %s, ", f.FileExt, f.ProgramVersion)
+		version := f.ProgramVersion
+		if version != "" {
+			rm.Version += fmt.Sprintf("%s: %s, ", f.FileExt, version)
+		}
 	}
 
 	if len(rm.Version) >= 2 {
