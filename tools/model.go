@@ -212,7 +212,7 @@ func (rm *RasModel) GeospatialData(destinationCRS int) (GeoData, error) {
 		return gd, errors.New("Cannot extract geospatial data, no valid coordinate reference system")
 	}
 
-	if err := checkUnitConsistency(modelUnits, sourceCRS, unitConsistencyMap); err != nil {
+	if err := checkUnitConsistency(modelUnits, sourceCRS); err != nil {
 		return gd, err
 	}
 

@@ -214,7 +214,7 @@ func stringtoFloat(s string) (float64, error) {
 	return 0, nil
 }
 
-func getConduits(line string, single bool, shapeMap map[int]string) (conduits, error) {
+func getConduits(line string, single bool) (conduits, error) {
 	lineData := strings.Split(rightofEquals(line), ",")
 	conduit := conduits{}
 
@@ -235,7 +235,7 @@ func getConduits(line string, single bool, shapeMap map[int]string) (conduits, e
 	if err != nil {
 		return conduit, err
 	}
-	conduit.Shape = shapeMap[shapeID]
+	conduit.Shape = conduitShapes[shapeID]
 
 	rise, err := stringtoFloat(lineData[1])
 	if err != nil {
@@ -264,7 +264,7 @@ func getConduits(line string, single bool, shapeMap map[int]string) (conduits, e
 	return conduit, nil
 }
 
-func getCulvertData(hsSc *bufio.Scanner, i int, lineData []string, shapeMap map[int]string) (culverts, int, error) {
+func getCulvertData(hsSc *bufio.Scanner, i int, lineData []string) (culverts, int, error) {
 	culvert := culverts{}
 
 	station, err := strconv.ParseFloat(strings.TrimSpace(lineData[1]), 64)
@@ -315,7 +315,7 @@ func getCulvertData(hsSc *bufio.Scanner, i int, lineData []string, shapeMap map[
 			culvert.DownLowChord = downHighLowPair[1]
 
 		case strings.HasPrefix(line, "Culvert="):
-			conduit, err := getConduits(line, true, shapeMap)
+			conduit, err := getConduits(line, true)
 			if err != nil {
 				return culvert, i, err
 			}
@@ -323,7 +323,7 @@ func getCulvertData(hsSc *bufio.Scanner, i int, lineData []string, shapeMap map[
 			culvert.NumConduits++
 
 		case strings.HasPrefix(line, "Multiple Barrel Culv="):
-			conduit, err := getConduits(line, false, shapeMap)
+			conduit, err := getConduits(line, false)
 			if err != nil {
 				return culvert, i, err
 			}
@@ -437,7 +437,7 @@ func getGates(nextLine string) (gates, error) {
 	return gate, nil
 }
 
-func getWeirData(rm *RasModel, fn string, i int, shapeMap map[int]string) (weirs, error) {
+func getWeirData(rm *RasModel, fn string, i int) (weirs, error) {
 	weir := weirs{}
 
 	f, err := rm.FileStore.GetObject(fn)
@@ -503,7 +503,7 @@ func getWeirData(rm *RasModel, fn string, i int, shapeMap map[int]string) (weirs
 				weir.NumGates++
 
 			case strings.HasPrefix(line, "IW Culv="):
-				conduit, err := getConduits(line, false, shapeMap)
+				conduit, err := getConduits(line, false)
 				if err != nil {
 					return weir, err
 				}
@@ -556,7 +556,7 @@ func getHydraulicStructureData(rm *RasModel, fn string, idx int) (hydraulicStruc
 
 				case 2:
 					var culvert culverts
-					culvert, i, err = getCulvertData(hsSc, i, data, conduitShapes)
+					culvert, i, err = getCulvertData(hsSc, i, data)
 					if err != nil {
 						return structures, err
 					}
@@ -573,7 +573,7 @@ func getHydraulicStructureData(rm *RasModel, fn string, idx int) (hydraulicStruc
 					bData.NumBridges++
 
 				case 5:
-					weir, err := getWeirData(rm, fn, i, conduitShapes)
+					weir, err := getWeirData(rm, fn, i)
 					if err != nil {
 						return structures, err
 					}

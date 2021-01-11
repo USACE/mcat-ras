@@ -47,11 +47,11 @@ var unitConsistencyMap map[string]string = map[string]string{
 	"SI Units":      "metre"}
 
 // checkUnitConsistency checks that the unit system used by the model and its coordinate reference system are the same
-func checkUnitConsistency(modelUnits string, sourceCRS string, ucMap map[string]string) error {
+func checkUnitConsistency(modelUnits string, sourceCRS string) error {
 	sourceSpRef := gdal.CreateSpatialReference(sourceCRS)
 
 	if crsUnits, ok := sourceSpRef.AttrValue("UNIT", 0); ok {
-		if ucMap[modelUnits] == crsUnits {
+		if unitConsistencyMap[modelUnits] == crsUnits {
 			return nil
 		}
 		return errors.New("The unit system of the model and coordinate reference system are inconsistent")
