@@ -17,6 +17,7 @@ type ProjectMetadata struct {
 	PlanFiles        []PlanFileContents //`json:"Plan Data"`
 	FlowFiles        []FlowFileContents //`json:"Flow Data"`
 	GeomFiles        []GeomFileContents //`json:"Geometry Data"`
+	Projection       string             //`json:"Projection"`
 	Notes            string             //`json:"Notes"`
 }
 
@@ -52,7 +53,6 @@ func rmNewLineChar(s string) string {
 
 // verifyPrjPath identifies the .prj file within the passed model directory ...
 func verifyPrjPath(key string, rm *RasModel) error {
-	rasFiles := make([]string, 0)
 
 	if filepath.Ext(key) != ".prj" {
 		return fmt.Errorf("%s is not a .prj file", key)
@@ -66,9 +66,7 @@ func verifyPrjPath(key string, rm *RasModel) error {
 		return fmt.Errorf("%s is not a RAS Project file", key)
 	}
 
-	rasFiles = append(rasFiles, key)
 	rm.Metadata.ProjFilePath = key
-	rm.FileList = rasFiles
 
 	return nil
 }

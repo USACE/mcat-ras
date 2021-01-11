@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -8,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/USACE/filestore"
+	"github.com/dewberry/gdal"
 )
 
 type fileExtMatchers struct {
@@ -21,6 +23,7 @@ type fileExtMatchers struct {
 	SteadyRun   *regexp.Regexp
 	UnsteadyRun *regexp.Regexp
 	AllFlowRun  *regexp.Regexp
+	Projection  *regexp.Regexp
 }
 
 var rasRE fileExtMatchers = fileExtMatchers{ // Maybe these ones are better? need a regex experts opinion
@@ -34,13 +37,15 @@ var rasRE fileExtMatchers = fileExtMatchers{ // Maybe these ones are better? nee
 	SteadyRun:   regexp.MustCompile(".r[0-9][0-9]"),     // `^\.r(0[1-9]|[1-9][0-9])$`
 	UnsteadyRun: regexp.MustCompile(".x[0-9][0-9]"),     // `^\.x(0[1-9]|[1-9][0-9])$`
 	AllFlowRun:  regexp.MustCompile(".[rx][0-9][0-9]"),  // `^\.[rx](0[1-9]|[1-9][0-9])$`
+	Projection:  regexp.MustCompile(".pr[oj]"),
 }
 
 // holder of multiple wait groups to help process files concurrency
 type rasWaitGroup struct {
-	Geom sync.WaitGroup
-	Plan sync.WaitGroup
-	Flow sync.WaitGroup
+	Geom       sync.WaitGroup
+	Plan       sync.WaitGroup
+	Flow       sync.WaitGroup
+	Projection sync.WaitGroup
 }
 
 // Model is a general type should contain all necessary data for a model of any type.
@@ -51,6 +56,7 @@ type Model struct {
 	Files          ModelFiles
 }
 
+// ModelFiles ...
 type ModelFiles struct {
 	InputFiles        InputFiles
 	OutputFiles       OutputFiles
@@ -100,6 +106,7 @@ type SupplementalFiles struct {
 	ObservationalData interface{} // placeholder
 }
 
+// RasModel ...
 type RasModel struct {
 	FileStore      filestore.FileStore
 	ModelDirectory string
@@ -110,10 +117,12 @@ type RasModel struct {
 	FileList       []string
 }
 
+// IsAModel ...
 func (rm *RasModel) IsAModel() bool {
 	return rm.isModel
 }
 
+// IsGeospatial ...
 func (rm *RasModel) IsGeospatial() bool {
 	if rm.Metadata.GeomFiles[0].FileExt != "" {
 		return true
@@ -121,14 +130,17 @@ func (rm *RasModel) IsGeospatial() bool {
 	return false
 }
 
+// ModelType ...
 func (rm *RasModel) ModelType() string {
 	return rm.Type
 }
 
+// ModelVersion ...
 func (rm *RasModel) ModelVersion() string {
 	return rm.Version
 }
 
+// Index ...
 func (rm *RasModel) Index() (Model, error) {
 	if !rm.IsAModel() {
 		return Model{}, errors.New("model is not valid")
@@ -189,15 +201,31 @@ func (rm *RasModel) Index() (Model, error) {
 }
 
 // GeospatialData ...
-func (rm *RasModel) GeospatialData() (GeoData, error) {
-	gd := GeoData{Features: make(map[string]Features), Georeference: DestinationCRS}
+func (rm *RasModel) GeospatialData(destinationCRS int) (GeoData, error) {
+	gd := GeoData{}
+
+	modelUnits := rm.Metadata.ProjFileContents.Units
+
+	sourceCRS := rm.Metadata.Projection
+
+	if sourceCRS == "" {
+		return gd, errors.New("Cannot extract geospatial data, no valid coordinate reference system")
+	}
+
+	if err := checkUnitConsistency(modelUnits, sourceCRS); err != nil {
+		return gd, err
+	}
+
+	gd.Features = make(map[string]Features)
+	gd.Georeference = destinationCRS
 
 	for _, g := range rm.Metadata.GeomFiles {
-		if err := GetGeospatialData(&gd, rm.FileStore, g.Path); err != nil {
+		if err := GetGeospatialData(&gd, rm.FileStore, g.Path, sourceCRS, destinationCRS); err != nil {
 			return gd, err
 		}
 	}
 	return gd, nil
+
 }
 
 func getModelFiles(rm *RasModel) error {
@@ -209,14 +237,44 @@ func getModelFiles(rm *RasModel) error {
 	}
 
 	for _, file := range *files {
-		if filepath.Ext(file.Name) != ".prj" {
-			rm.FileList = append(rm.FileList, filepath.Join(file.Path, file.Name))
-		}
+		rm.FileList = append(rm.FileList, filepath.Join(file.Path, file.Name))
 	}
 
 	return nil
 }
 
+// getProjection Reads a projection file. returns none to allow concurrency
+func getProjection(rm *RasModel, fn string, wg *sync.WaitGroup, errChan chan error) {
+
+	defer wg.Done()
+
+	f, err := rm.FileStore.GetObject(fn)
+	if err != nil {
+		errChan <- err
+		return
+	}
+	defer f.Close()
+
+	sc := bufio.NewScanner(f)
+	sc.Scan()
+	line := sc.Text()
+
+	sourceSpRef := gdal.CreateSpatialReference(line)
+	if err := sourceSpRef.Validate(); err != nil {
+		rm.Metadata.Projection = ""
+		return
+	}
+	if rm.Metadata.Projection != "" {
+		errChan <- errors.New("Multiple projection files identified, cannot determine coordinate reference system")
+		return
+	}
+
+	rm.Metadata.Projection = line
+
+	return
+}
+
+// NewRasModel ...
 func NewRasModel(key string, fs filestore.FileStore) (*RasModel, error) {
 	rm := RasModel{ModelDirectory: filepath.Dir(key), FileStore: fs, Type: "RAS"}
 
@@ -256,12 +314,19 @@ func NewRasModel(key string, fs filestore.FileStore) (*RasModel, error) {
 			rasWG.Flow.Add(1)
 			go getFlowData(&rm, fp, &rasWG.Flow, errChan)
 
+		case rasRE.Projection.MatchString(ext):
+			if filepath.Base(key) != filepath.Base(fp) {
+				rasWG.Projection.Add(1)
+				go getProjection(&rm, fp, &rasWG.Projection, errChan)
+			}
+
 		}
 	}
 
 	rasWG.Plan.Wait()
 	rasWG.Geom.Wait()
 	rasWG.Flow.Wait()
+	rasWG.Projection.Wait()
 
 	if len(errChan) > 0 {
 		fmt.Printf("Encountered %d errors\n", len(errChan))
@@ -269,13 +334,22 @@ func NewRasModel(key string, fs filestore.FileStore) (*RasModel, error) {
 	}
 
 	for _, p := range rm.Metadata.PlanFiles {
-		rm.Version += fmt.Sprintf("%s: %s, ", p.FileExt, p.ProgramVersion)
+		version := p.ProgramVersion
+		if version != "" {
+			rm.Version += fmt.Sprintf("%s: %s, ", p.FileExt, version)
+		}
 	}
 	for _, g := range rm.Metadata.GeomFiles {
-		rm.Version += fmt.Sprintf("%s: %s, ", g.FileExt, g.ProgramVersion)
+		version := g.ProgramVersion
+		if version != "" {
+			rm.Version += fmt.Sprintf("%s: %s, ", g.FileExt, version)
+		}
 	}
 	for _, f := range rm.Metadata.FlowFiles {
-		rm.Version += fmt.Sprintf("%s: %s, ", f.FileExt, f.ProgramVersion)
+		version := f.ProgramVersion
+		if version != "" {
+			rm.Version += fmt.Sprintf("%s: %s, ", f.FileExt, version)
+		}
 	}
 
 	if len(rm.Version) >= 2 {
