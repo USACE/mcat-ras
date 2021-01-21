@@ -159,6 +159,7 @@ findLineSegment:
 func attributeZ(xyPairs [][2]float64, mzPairs [][2]float64) []xyzPoint {
 	points := []xyzPoint{}
 	startingStation := mzPairs[0][0]
+
 	for _, mzPair := range mzPairs {
 		newPoint := interpXY(xyPairs, mzPair[0]-startingStation)
 		if newPoint[0] != 0 && newPoint[1] != 0 {
@@ -243,7 +244,7 @@ func getRiverCenterline(sc *bufio.Scanner, transform gdal.CoordinateTransform) (
 	if err != nil {
 		return layer, err
 	}
-	fmt.Println(xyPairs)
+
 	xyLineString := gdal.Create(gdal.GT_LineString)
 	for _, pair := range xyPairs {
 		xyLineString.AddPoint2D(pair[0], pair[1])
@@ -270,14 +271,16 @@ func getXSBanks(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReac
 	if err != nil {
 		return xsLayer, bankLayers, err
 	}
-	for sc.Scan() {
-		line := sc.Text()
-		if strings.HasPrefix(line, "Bank Sta=") {
-			bankLayers, err = getBanks(line, transform, xsLayer, xyPairs, startingStation)
-			if err != nil {
-				return xsLayer, bankLayers, err
+	if xsLayer.Fields["InterpolatedLine"].(bool) {
+		for sc.Scan() {
+			line := sc.Text()
+			if strings.HasPrefix(line, "Bank Sta=") {
+				bankLayers, err = getBanks(line, transform, xsLayer, xyPairs, startingStation)
+				if err != nil {
+					return xsLayer, bankLayers, err
+				}
+				break
 			}
-			break
 		}
 	}
 	return xsLayer, bankLayers, err
@@ -285,9 +288,9 @@ func getXSBanks(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReac
 
 func getXS(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReachName string) (VectorLayer, [][2]float64, float64, error) {
 	xyPairs := [][2]float64{}
-
 	layer := VectorLayer{Fields: map[string]interface{}{}}
 	layer.Fields["RiverReachName"] = riverReachName
+	layer.Fields["InterpolatedLine"] = false
 
 	compData := strings.Split(rightofEquals(sc.Text()), ",")
 
@@ -301,17 +304,25 @@ func getXS(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReachName
 	if err != nil {
 		return layer, xyPairs, 0.0, err
 	}
+	xyzLineString := gdal.Create(gdal.GT_LineString25D)
+	for _, pair := range xyPairs {
+		xyzLineString.AddPoint(pair[0], pair[1], 0.0)
+	}
+	lenCutLine := xyzLineString.Length()
 
 	mzPairs, err := getDataPairsfromTextBlock("#Sta/Elev", sc, 80, 8)
 	if err != nil {
 		return layer, xyPairs, mzPairs[0][0], err
 	}
+	lenProfile := mzPairs[len(mzPairs)-1][0] - mzPairs[0][0]
 
-	xyzPoints := attributeZ(xyPairs, mzPairs)
-
-	xyzLineString := gdal.Create(gdal.GT_LineString25D)
-	for _, point := range xyzPoints {
-		xyzLineString.AddPoint(point.x, point.y, point.z)
+	if lenProfile-lenCutLine <= 0.1 {
+		xyzPoints := attributeZ(xyPairs, mzPairs)
+		xyzLineString = gdal.Create(gdal.GT_LineString25D)
+		for _, point := range xyzPoints {
+			xyzLineString.AddPoint(point.x, point.y, point.z)
+		}
+		layer.Fields["InterpolatedLine"] = true
 	}
 
 	xyzLineString.Transform(transform)
