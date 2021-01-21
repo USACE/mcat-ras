@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -225,6 +226,15 @@ func flipXYPoint(xyPoint gdal.Geometry) gdal.Geometry {
 	return yxPoint
 }
 
+func toNumeric(s string) (string, error) {
+	reg, err := regexp.Compile("[^.0-9]+")
+	if err != nil {
+		return s, err
+	}
+	num := reg.ReplaceAllString(s, "")
+	return num, nil
+}
+
 func getRiverCenterline(sc *bufio.Scanner, transform gdal.CoordinateTransform) (VectorLayer, error) {
 	riverReach := strings.Split(rightofEquals(sc.Text()), ",")
 	layer := VectorLayer{FeatureName: fmt.Sprintf("%s, %s", strings.TrimSpace(riverReach[0]), strings.TrimSpace(riverReach[1]))}
@@ -233,7 +243,7 @@ func getRiverCenterline(sc *bufio.Scanner, transform gdal.CoordinateTransform) (
 	if err != nil {
 		return layer, err
 	}
-
+	fmt.Println(xyPairs)
 	xyLineString := gdal.Create(gdal.GT_LineString)
 	for _, pair := range xyPairs {
 		xyLineString.AddPoint2D(pair[0], pair[1])
@@ -244,6 +254,7 @@ func getRiverCenterline(sc *bufio.Scanner, transform gdal.CoordinateTransform) (
 	yxLineString := flipXYLineString(xyLineString)
 
 	multiLineString := yxLineString.ForceToMultiLineString()
+
 	wkb, err := multiLineString.ToWKB()
 	if err != nil {
 		return layer, err
@@ -273,11 +284,20 @@ func getXSBanks(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReac
 }
 
 func getXS(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReachName string) (VectorLayer, [][2]float64, float64, error) {
-	compData := strings.Split(rightofEquals(sc.Text()), ",")
-	layer := VectorLayer{FeatureName: strings.TrimSpace(compData[1]), Fields: map[string]interface{}{}}
+	xyPairs := [][2]float64{}
+
+	layer := VectorLayer{Fields: map[string]interface{}{}}
 	layer.Fields["RiverReachName"] = riverReachName
 
-	xyPairs, err := getDataPairsfromTextBlock("XS GIS Cut Line", sc, 64, 16)
+	compData := strings.Split(rightofEquals(sc.Text()), ",")
+
+	xsName, err := toNumeric(compData[1])
+	if err != nil {
+		return layer, xyPairs, 0.0, err
+	}
+	layer.FeatureName = xsName
+
+	xyPairs, err = getDataPairsfromTextBlock("XS GIS Cut Line", sc, 64, 16)
 	if err != nil {
 		return layer, xyPairs, 0.0, err
 	}
