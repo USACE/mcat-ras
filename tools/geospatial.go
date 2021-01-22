@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -158,6 +159,7 @@ findLineSegment:
 func attributeZ(xyPairs [][2]float64, mzPairs [][2]float64) []xyzPoint {
 	points := []xyzPoint{}
 	startingStation := mzPairs[0][0]
+
 	for _, mzPair := range mzPairs {
 		newPoint := interpXY(xyPairs, mzPair[0]-startingStation)
 		if newPoint[0] != 0 && newPoint[1] != 0 {
@@ -225,6 +227,15 @@ func flipXYPoint(xyPoint gdal.Geometry) gdal.Geometry {
 	return yxPoint
 }
 
+func toNumeric(s string) (string, error) {
+	reg, err := regexp.Compile("[^.0-9]+")
+	if err != nil {
+		return s, err
+	}
+	num := reg.ReplaceAllString(s, "")
+	return num, nil
+}
+
 func getRiverCenterline(sc *bufio.Scanner, transform gdal.CoordinateTransform) (VectorLayer, error) {
 	riverReach := strings.Split(rightofEquals(sc.Text()), ",")
 	layer := VectorLayer{FeatureName: fmt.Sprintf("%s, %s", strings.TrimSpace(riverReach[0]), strings.TrimSpace(riverReach[1]))}
@@ -244,6 +255,7 @@ func getRiverCenterline(sc *bufio.Scanner, transform gdal.CoordinateTransform) (
 	yxLineString := flipXYLineString(xyLineString)
 
 	multiLineString := yxLineString.ForceToMultiLineString()
+
 	wkb, err := multiLineString.ToWKB()
 	if err != nil {
 		return layer, err
@@ -259,39 +271,58 @@ func getXSBanks(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReac
 	if err != nil {
 		return xsLayer, bankLayers, err
 	}
-	for sc.Scan() {
-		line := sc.Text()
-		if strings.HasPrefix(line, "Bank Sta=") {
-			bankLayers, err = getBanks(line, transform, xsLayer, xyPairs, startingStation)
-			if err != nil {
-				return xsLayer, bankLayers, err
+	if xsLayer.Fields["InterpolatedLine"].(bool) {
+		for sc.Scan() {
+			line := sc.Text()
+			if strings.HasPrefix(line, "Bank Sta=") {
+				bankLayers, err = getBanks(line, transform, xsLayer, xyPairs, startingStation)
+				if err != nil {
+					return xsLayer, bankLayers, err
+				}
+				break
 			}
-			break
 		}
 	}
 	return xsLayer, bankLayers, err
 }
 
 func getXS(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReachName string) (VectorLayer, [][2]float64, float64, error) {
-	compData := strings.Split(rightofEquals(sc.Text()), ",")
-	layer := VectorLayer{FeatureName: strings.TrimSpace(compData[1]), Fields: map[string]interface{}{}}
+	xyPairs := [][2]float64{}
+	layer := VectorLayer{Fields: map[string]interface{}{}}
 	layer.Fields["RiverReachName"] = riverReachName
+	layer.Fields["InterpolatedLine"] = false
 
-	xyPairs, err := getDataPairsfromTextBlock("XS GIS Cut Line", sc, 64, 16)
+	compData := strings.Split(rightofEquals(sc.Text()), ",")
+
+	xsName, err := toNumeric(compData[1])
 	if err != nil {
 		return layer, xyPairs, 0.0, err
 	}
+	layer.FeatureName = xsName
+
+	xyPairs, err = getDataPairsfromTextBlock("XS GIS Cut Line", sc, 64, 16)
+	if err != nil {
+		return layer, xyPairs, 0.0, err
+	}
+	xyzLineString := gdal.Create(gdal.GT_LineString25D)
+	for _, pair := range xyPairs {
+		xyzLineString.AddPoint(pair[0], pair[1], 0.0)
+	}
+	lenCutLine := xyzLineString.Length()
 
 	mzPairs, err := getDataPairsfromTextBlock("#Sta/Elev", sc, 80, 8)
 	if err != nil {
 		return layer, xyPairs, mzPairs[0][0], err
 	}
+	lenProfile := mzPairs[len(mzPairs)-1][0] - mzPairs[0][0]
 
-	xyzPoints := attributeZ(xyPairs, mzPairs)
-
-	xyzLineString := gdal.Create(gdal.GT_LineString25D)
-	for _, point := range xyzPoints {
-		xyzLineString.AddPoint(point.x, point.y, point.z)
+	if lenProfile-lenCutLine <= 0.1 {
+		xyzPoints := attributeZ(xyPairs, mzPairs)
+		xyzLineString = gdal.Create(gdal.GT_LineString25D)
+		for _, point := range xyzPoints {
+			xyzLineString.AddPoint(point.x, point.y, point.z)
+		}
+		layer.Fields["InterpolatedLine"] = true
 	}
 
 	xyzLineString.Transform(transform)
