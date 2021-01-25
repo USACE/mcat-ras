@@ -271,7 +271,7 @@ func getXSBanks(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReac
 	if err != nil {
 		return xsLayer, bankLayers, err
 	}
-	if xsLayer.Fields["InterpolatedLine"].(bool) {
+	if xsLayer.Fields["CutLineProfileMatch"].(bool) {
 		for sc.Scan() {
 			line := sc.Text()
 			if strings.HasPrefix(line, "Bank Sta=") {
@@ -290,7 +290,7 @@ func getXS(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReachName
 	xyPairs := [][2]float64{}
 	layer := VectorLayer{Fields: map[string]interface{}{}}
 	layer.Fields["RiverReachName"] = riverReachName
-	layer.Fields["InterpolatedLine"] = false
+	layer.Fields["CutLineProfileMatch"] = false
 
 	compData := strings.Split(rightofEquals(sc.Text()), ",")
 
@@ -316,13 +316,13 @@ func getXS(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReachName
 	}
 	lenProfile := mzPairs[len(mzPairs)-1][0] - mzPairs[0][0]
 
-	if lenProfile-lenCutLine <= 0.1 {
+	if math.Abs(lenProfile-lenCutLine) <= 0.1 {
 		xyzPoints := attributeZ(xyPairs, mzPairs)
 		xyzLineString = gdal.Create(gdal.GT_LineString25D)
 		for _, point := range xyzPoints {
 			xyzLineString.AddPoint(point.x, point.y, point.z)
 		}
-		layer.Fields["InterpolatedLine"] = true
+		layer.Fields["CutLineProfileMatch"] = true
 	}
 
 	xyzLineString.Transform(transform)
