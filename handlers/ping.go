@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/USACE/filestore"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/labstack/echo/v4"
 )
 
@@ -32,7 +33,14 @@ func Ping(fs *filestore.FileStore) echo.HandlerFunc {
 			s3FS := (*fs).(*filestore.S3FS)
 			err := s3FS.Ping()
 			if err != nil {
-				return c.JSON(http.StatusInternalServerError, SimpleResponse{http.StatusInternalServerError, "Unavailable"})
+				if awsErr, ok := err.(awserr.Error); ok {
+					if awsErr.Code() != "AccessDenied" {
+						msg := fmt.Sprintf("Unavailable: %s", awsErr.Code())
+						return c.JSON(http.StatusInternalServerError, SimpleResponse{http.StatusInternalServerError, msg})
+					}
+				} else {
+					return c.JSON(http.StatusInternalServerError, SimpleResponse{http.StatusInternalServerError, "Unavailable"})
+				}
 			}
 			fmt.Println("File is on S3")
 			return c.JSON(http.StatusOK, SimpleResponse{http.StatusOK, "🏓 Pong! 🏓"})
