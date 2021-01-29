@@ -34,11 +34,11 @@ func main() {
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
 
 	// ras endpoints
-	e.GET("/index", handlers.Index(appConfig.FileStore))
 	e.GET("/isamodel", handlers.IsAModel(appConfig.FileStore))
-	e.GET("/isgeospatial", handlers.IsGeospatial(appConfig.FileStore))
 	e.GET("/modeltype", handlers.ModelType(appConfig.FileStore))
 	e.GET("/modelversion", handlers.ModelVersion(appConfig.FileStore))
+	e.GET("/index", handlers.Index(appConfig.FileStore))
+	e.GET("/isgeospatial", handlers.IsGeospatial(appConfig.FileStore))
 	e.GET("/geospatialdata", handlers.GeospatialData(appConfig))
 
 	e.Logger.Fatal(e.Start(appConfig.Address()))

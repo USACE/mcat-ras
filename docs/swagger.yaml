@@ -6,7 +6,7 @@ definitions:
       status:
         type: integer
     type: object
-  ras.ControlFiles:
+  tools.ControlFiles:
     properties:
       data:
         additionalProperties: true
@@ -17,7 +17,7 @@ definitions:
           type: string
         type: array
     type: object
-  ras.ForcingFiles:
+  tools.ForcingFiles:
     properties:
       data:
         additionalProperties: true
@@ -28,7 +28,7 @@ definitions:
           type: string
         type: array
     type: object
-  ras.GeometryFiles:
+  tools.GeometryFiles:
     properties:
       featuresProperties:
         additionalProperties: true
@@ -42,14 +42,14 @@ definitions:
           type: string
         type: array
     type: object
-  ras.InputFiles:
+  tools.InputFiles:
     properties:
       controlFiles:
-        $ref: '#/definitions/ras.ControlFiles'
+        $ref: '#/definitions/tools.ControlFiles'
       forcingFiles:
-        $ref: '#/definitions/ras.ForcingFiles'
+        $ref: '#/definitions/tools.ForcingFiles'
       geometryFiles:
-        $ref: '#/definitions/ras.GeometryFiles'
+        $ref: '#/definitions/tools.GeometryFiles'
       localVariables:
         description: placeholder
         type: object
@@ -57,27 +57,27 @@ definitions:
         description: placeholder
         type: object
     type: object
-  ras.Model:
+  tools.Model:
     properties:
       definitionFile:
         type: string
       files:
-        $ref: '#/definitions/ras.ModelFiles'
+        $ref: '#/definitions/tools.ModelFiles'
       type:
         type: string
       version:
         type: string
     type: object
-  ras.ModelFiles:
+  tools.ModelFiles:
     properties:
       inputFiles:
-        $ref: '#/definitions/ras.InputFiles'
+        $ref: '#/definitions/tools.InputFiles'
       outputFiles:
-        $ref: '#/definitions/ras.OutputFiles'
+        $ref: '#/definitions/tools.OutputFiles'
       supplementalFiles:
-        $ref: '#/definitions/ras.SupplementalFiles'
+        $ref: '#/definitions/tools.SupplementalFiles'
     type: object
-  ras.OutputFiles:
+  tools.OutputFiles:
     properties:
       modelPrediction:
         description: placeholder
@@ -95,7 +95,7 @@ definitions:
           type: string
         type: array
     type: object
-  ras.SupplementalFiles:
+  tools.SupplementalFiles:
     properties:
       observationalData:
         description: placeholder
@@ -124,7 +124,7 @@ paths:
       - application/json
       description: Extract geospatial data from a RAS model given an s3 key
       parameters:
-      - description: /pfra-models/mipmodels/MD/M000309/T1ChptnkR.prj
+      - description: /models/ras/CHURCH HOUSE GULLY/CHURCH HOUSE GULLY.prj
         in: query
         name: definition_file
         required: true
@@ -149,7 +149,7 @@ paths:
       - application/json
       description: Extract metadata from a RAS model given an s3 key
       parameters:
-      - description: /pfra-models/mipmodels/MD/M000309/T1ChptnkR.prj
+      - description: /models/ras/CHURCH HOUSE GULLY/CHURCH HOUSE GULLY.prj
         in: query
         name: definition_file
         required: true
@@ -160,7 +160,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/ras.Model'
+            $ref: '#/definitions/tools.Model'
         "500":
           description: Internal Server Error
           schema:
@@ -174,7 +174,7 @@ paths:
       - application/json
       description: Check if the given key is a RAS model
       parameters:
-      - description: /pfra-models/mipmodels/MD/M000309/T1ChptnkR.prj
+      - description: /models/ras/CHURCH HOUSE GULLY/CHURCH HOUSE GULLY.prj
         in: query
         name: definition_file
         required: true
@@ -195,7 +195,7 @@ paths:
       - application/json
       description: Check if the RAS model has geospatial information
       parameters:
-      - description: /pfra-models/mipmodels/MD/M000309/T1ChptnkR.prj
+      - description: /models/ras/CHURCH HOUSE GULLY/CHURCH HOUSE GULLY.prj
         in: query
         name: definition_file
         required: true
@@ -216,7 +216,7 @@ paths:
       - application/json
       description: Extract the model type given an s3 key
       parameters:
-      - description: /pfra-models/mipmodels/MD/M000309/T1ChptnkR.prj
+      - description: /models/ras/CHURCH HOUSE GULLY/CHURCH HOUSE GULLY.prj
         in: query
         name: definition_file
         required: true
@@ -241,7 +241,7 @@ paths:
       - application/json
       description: Extract the RAS model version given an s3 key
       parameters:
-      - description: /pfra-models/mipmodels/MD/M000309/T1ChptnkR.prj
+      - description: /models/ras/CHURCH HOUSE GULLY/CHURCH HOUSE GULLY.prj
         in: query
         name: definition_file
         required: true

@@ -15,7 +15,7 @@ import (
 // @Tags MCAT
 // @Accept json
 // @Produce json
-// @Param definition_file query string true "/pfra-models/mipmodels/MD/M000309/T1ChptnkR.prj"
+// @Param definition_file query string true "/models/ras/CHURCH HOUSE GULLY/CHURCH HOUSE GULLY.prj"
 // @Success 200 {object} ras.Model
 // @Failure 500 {object} SimpleResponse
 // @Router /index [get]
