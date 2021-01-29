@@ -108,26 +108,21 @@ type SupplementalFiles struct {
 
 // RasModel ...
 type RasModel struct {
+	Type           string
+	Version        string
 	FileStore      filestore.FileStore
 	ModelDirectory string
-	Version        string
-	Type           string
-	Metadata       ProjectMetadata
-	isModel        bool
 	FileList       []string
+	Metadata       ProjectMetadata
 }
 
 // IsAModel ...
 func (rm *RasModel) IsAModel() bool {
-	return rm.isModel
-}
-
-// IsGeospatial ...
-func (rm *RasModel) IsGeospatial() bool {
-	if rm.Metadata.GeomFiles[0].FileExt != "" {
-		return true
+	if len(rm.Metadata.GeomFiles) == 0 {
+		fmt.Println("no geometry files identified")
+		return false
 	}
-	return false
+	return true
 }
 
 // ModelType ...
@@ -141,15 +136,11 @@ func (rm *RasModel) ModelVersion() string {
 }
 
 // Index ...
-func (rm *RasModel) Index() (Model, error) {
-	if !rm.IsAModel() {
-		return Model{}, errors.New("model is not valid")
-	}
-
+func (rm *RasModel) Index() Model {
 	mod := Model{
 		Type:           rm.Type,
 		Version:        rm.Version,
-		DefinitionFile: rm.Metadata.ProjFilePath,
+		DefinitionFile: filepath.Base(rm.Metadata.ProjFilePath),
 		Files: ModelFiles{
 			InputFiles: InputFiles{
 				ControlFiles: ControlFiles{
@@ -163,7 +154,7 @@ func (rm *RasModel) Index() (Model, error) {
 				GeometryFiles: GeometryFiles{
 					Paths:              make([]string, 0),
 					FeaturesProperties: make(map[string]interface{}),
-					Georeference:       nil,
+					Georeference:       rm.Metadata.Projection,
 				},
 				SimulationVariables: nil,
 				LocalVariables:      nil,
@@ -183,21 +174,33 @@ func (rm *RasModel) Index() (Model, error) {
 	}
 
 	for _, p := range rm.Metadata.PlanFiles {
+		file := filepath.Base(p.Path)
 		mod.Files.InputFiles.ControlFiles.Paths = append(mod.Files.InputFiles.ControlFiles.Paths, p.Path)
-		mod.Files.InputFiles.ControlFiles.Data["PlanTitle"] = p.PlanTitle
+		mod.Files.InputFiles.ControlFiles.Data[file] = p
 	}
 	for _, g := range rm.Metadata.GeomFiles {
+		file := filepath.Base(g.Path)
 		mod.Files.InputFiles.GeometryFiles.Paths = append(mod.Files.InputFiles.GeometryFiles.Paths, g.Path)
-		mod.Files.InputFiles.GeometryFiles.FeaturesProperties["GeomTitle"] = g.GeomTitle
+		mod.Files.InputFiles.GeometryFiles.FeaturesProperties[file] = g
 	}
 	for _, f := range rm.Metadata.FlowFiles {
+		file := filepath.Base(f.Path)
 		mod.Files.InputFiles.ForcingFiles.Paths = append(mod.Files.InputFiles.ForcingFiles.Paths, f.Path)
-		mod.Files.InputFiles.ForcingFiles.Data["FlowTitle"] = f.FlowTitle
+		mod.Files.InputFiles.ForcingFiles.Data[file] = f
 	}
 
-	// need to add output files and supplemental files...
+	// Need to add output and SupplementalFiles files...
+	return mod
+}
 
-	return mod, nil
+// IsGeospatial ...
+func (rm *RasModel) IsGeospatial() bool {
+	if rm.Metadata.Projection == "" {
+		fmt.Println("no valid coordinate reference system")
+		return false
+	}
+
+	return true
 }
 
 // GeospatialData ...
@@ -244,13 +247,13 @@ func getModelFiles(rm *RasModel) error {
 }
 
 // getProjection Reads a projection file. returns none to allow concurrency
-func getProjection(rm *RasModel, fn string, wg *sync.WaitGroup, errChan chan error) {
+func getProjection(rm *RasModel, fn string, wg *sync.WaitGroup) {
 
 	defer wg.Done()
 
 	f, err := rm.FileStore.GetObject(fn)
 	if err != nil {
-		errChan <- err
+		fmt.Println(err)
 		return
 	}
 	defer f.Close()
@@ -263,11 +266,13 @@ func getProjection(rm *RasModel, fn string, wg *sync.WaitGroup, errChan chan err
 	if err := sourceSpRef.Validate(); err != nil {
 		if filepath.Ext(fn) == ".prj" {
 			fmt.Println(fmt.Sprintf("%s is not a valid projection file, check that there are not multiple project files.\n", fn))
+		} else {
+			fmt.Println(err)
 		}
 		return
 	}
 	if rm.Metadata.Projection != "" {
-		errChan <- errors.New("Multiple projection files identified, cannot determine coordinate reference system")
+		fmt.Println("Multiple projection files identified, cannot determine coordinate reference system")
 		return
 	}
 
@@ -295,7 +300,6 @@ func NewRasModel(key string, fs filestore.FileStore) (*RasModel, error) {
 		return &rm, err
 	}
 
-	errChan := make(chan error)
 	var rasWG rasWaitGroup
 
 	for _, fp := range rm.FileList {
@@ -306,20 +310,20 @@ func NewRasModel(key string, fs filestore.FileStore) (*RasModel, error) {
 
 		case rasRE.Plan.MatchString(ext):
 			rasWG.Plan.Add(1)
-			go getPlanData(&rm, fp, &rasWG.Plan, errChan)
+			go getPlanData(&rm, fp, &rasWG.Plan)
 
 		case rasRE.Geom.MatchString(ext):
 			rasWG.Geom.Add(1)
-			go getGeomData(&rm, fp, &rasWG.Geom, errChan)
+			go getGeomData(&rm, fp, &rasWG.Geom)
 
 		case rasRE.AllFlow.MatchString(ext):
 			rasWG.Flow.Add(1)
-			go getFlowData(&rm, fp, &rasWG.Flow, errChan)
+			go getFlowData(&rm, fp, &rasWG.Flow)
 
 		case rasRE.Projection.MatchString(ext):
 			if filepath.Base(key) != filepath.Base(fp) {
 				rasWG.Projection.Add(1)
-				go getProjection(&rm, fp, &rasWG.Projection, errChan)
+				go getProjection(&rm, fp, &rasWG.Projection)
 			}
 
 		}
@@ -329,11 +333,6 @@ func NewRasModel(key string, fs filestore.FileStore) (*RasModel, error) {
 	rasWG.Geom.Wait()
 	rasWG.Flow.Wait()
 	rasWG.Projection.Wait()
-
-	if len(errChan) > 0 {
-		fmt.Printf("Encountered %d errors\n", len(errChan))
-		return &rm, <-errChan
-	}
 
 	for _, p := range rm.Metadata.PlanFiles {
 		version := p.ProgramVersion
@@ -357,7 +356,6 @@ func NewRasModel(key string, fs filestore.FileStore) (*RasModel, error) {
 	if len(rm.Version) >= 2 {
 		rm.Version = rm.Version[0 : len(rm.Version)-2]
 	}
-	rm.isModel = true
 
 	return &rm, nil
 }

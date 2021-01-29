@@ -11,11 +11,11 @@ import (
 
 // IsGeospatial godoc
 // @Summary Check if the RAS model has geospatial information
-// @Description  Check if the RAS model has geospatial information
+// @Description Check if the RAS model has geospatial information
 // @Tags MCAT
 // @Accept json
 // @Produce json
-// @Param definition_file query string true "/pfra-models/mipmodels/MD/M000309/T1ChptnkR.prj"
+// @Param definition_file query string true "/models/ras/CHURCH HOUSE GULLY/CHURCH HOUSE GULLY.prj"
 // @Success 200 {object} bool
 // @Router /isgeospatial [get]
 func IsGeospatial(fs *filestore.FileStore) echo.HandlerFunc {
@@ -25,7 +25,7 @@ func IsGeospatial(fs *filestore.FileStore) echo.HandlerFunc {
 
 		rm, err := ras.NewRasModel(definitionFile, *fs)
 		if err != nil {
-			return c.JSON(http.StatusOK, false)
+			return c.JSON(http.StatusInternalServerError, SimpleResponse{http.StatusInternalServerError, err.Error()})
 		}
 		isIt := rm.IsGeospatial()
 

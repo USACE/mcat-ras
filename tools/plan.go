@@ -2,6 +2,7 @@ package tools
 
 import (
 	"bufio"
+	"fmt"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -21,18 +22,27 @@ type PlanFileContents struct {
 	FlowFile        string //`json:"Flow File"`
 	FlowRegime      string //`json:"FlowRegime"`
 	Description     string //`json:"Description"`
+	Notes           string
 }
 
 // getPlanData Reads a plan file. returns none to allow concurrency
-func getPlanData(rm *RasModel, fn string, wg *sync.WaitGroup, errChan chan error) {
-
+func getPlanData(rm *RasModel, fn string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	meta := PlanFileContents{Path: fn, FileExt: filepath.Ext(fn)}
 
+	var err error
+	msg := fmt.Sprintf("%s failed to process.", filepath.Base(fn))
+	defer func() {
+		meta.Notes += msg
+		rm.Metadata.PlanFiles = append(rm.Metadata.PlanFiles, meta)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}()
+
 	f, err := rm.FileStore.GetObject(fn)
 	if err != nil {
-		errChan <- err
 		return
 	}
 	defer f.Close()
@@ -44,23 +54,17 @@ func getPlanData(rm *RasModel, fn string, wg *sync.WaitGroup, errChan chan error
 		line = sc.Text()
 
 		match, err := regexp.MatchString("=", line)
-
 		if err != nil {
-			errChan <- err
 			return
 		}
 
 		beginDescription, err := regexp.MatchString("BEGIN DESCRIPTION", line)
-
 		if err != nil {
-			errChan <- err
 			return
 		}
 
 		flowRegime, err := regexp.MatchString("Subcritical|Supercritical|Mixed", line)
-
 		if err != nil {
-			errChan <- err
 			return
 		}
 
@@ -107,8 +111,7 @@ func getPlanData(rm *RasModel, fn string, wg *sync.WaitGroup, errChan chan error
 			meta.FlowRegime = line
 		}
 	}
-
-	rm.Metadata.PlanFiles = append(rm.Metadata.PlanFiles, meta)
+	msg = ""
 	return
 
 }

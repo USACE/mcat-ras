@@ -44,7 +44,7 @@ var doc = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "/pfra-models/mipmodels/MD/M000309/T1ChptnkR.prj",
+                        "description": "/models/ras/CHURCH HOUSE GULLY/CHURCH HOUSE GULLY.prj",
                         "name": "definition_file",
                         "in": "query",
                         "required": true
@@ -82,7 +82,7 @@ var doc = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "/pfra-models/mipmodels/MD/M000309/T1ChptnkR.prj",
+                        "description": "/models/ras/CHURCH HOUSE GULLY/CHURCH HOUSE GULLY.prj",
                         "name": "definition_file",
                         "in": "query",
                         "required": true
@@ -92,7 +92,7 @@ var doc = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/ras.Model"
+                            "$ref": "#/definitions/tools.Model"
                         }
                     },
                     "500": {
@@ -120,7 +120,7 @@ var doc = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "/pfra-models/mipmodels/MD/M000309/T1ChptnkR.prj",
+                        "description": "/models/ras/CHURCH HOUSE GULLY/CHURCH HOUSE GULLY.prj",
                         "name": "definition_file",
                         "in": "query",
                         "required": true
@@ -152,7 +152,7 @@ var doc = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "/pfra-models/mipmodels/MD/M000309/T1ChptnkR.prj",
+                        "description": "/models/ras/CHURCH HOUSE GULLY/CHURCH HOUSE GULLY.prj",
                         "name": "definition_file",
                         "in": "query",
                         "required": true
@@ -184,7 +184,7 @@ var doc = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "/pfra-models/mipmodels/MD/M000309/T1ChptnkR.prj",
+                        "description": "/models/ras/CHURCH HOUSE GULLY/CHURCH HOUSE GULLY.prj",
                         "name": "definition_file",
                         "in": "query",
                         "required": true
@@ -222,7 +222,7 @@ var doc = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "/pfra-models/mipmodels/MD/M000309/T1ChptnkR.prj",
+                        "description": "/models/ras/CHURCH HOUSE GULLY/CHURCH HOUSE GULLY.prj",
                         "name": "definition_file",
                         "in": "query",
                         "required": true
@@ -280,7 +280,7 @@ var doc = `{
                 }
             }
         },
-        "ras.ControlFiles": {
+        "tools.ControlFiles": {
             "type": "object",
             "properties": {
                 "data": {
@@ -296,7 +296,7 @@ var doc = `{
                 }
             }
         },
-        "ras.ForcingFiles": {
+        "tools.ForcingFiles": {
             "type": "object",
             "properties": {
                 "data": {
@@ -312,7 +312,7 @@ var doc = `{
                 }
             }
         },
-        "ras.GeometryFiles": {
+        "tools.GeometryFiles": {
             "type": "object",
             "properties": {
                 "featuresProperties": {
@@ -332,17 +332,17 @@ var doc = `{
                 }
             }
         },
-        "ras.InputFiles": {
+        "tools.InputFiles": {
             "type": "object",
             "properties": {
                 "controlFiles": {
-                    "$ref": "#/definitions/ras.ControlFiles"
+                    "$ref": "#/definitions/tools.ControlFiles"
                 },
                 "forcingFiles": {
-                    "$ref": "#/definitions/ras.ForcingFiles"
+                    "$ref": "#/definitions/tools.ForcingFiles"
                 },
                 "geometryFiles": {
-                    "$ref": "#/definitions/ras.GeometryFiles"
+                    "$ref": "#/definitions/tools.GeometryFiles"
                 },
                 "localVariables": {
                     "description": "placeholder",
@@ -354,14 +354,14 @@ var doc = `{
                 }
             }
         },
-        "ras.Model": {
+        "tools.Model": {
             "type": "object",
             "properties": {
                 "definitionFile": {
                     "type": "string"
                 },
                 "files": {
-                    "$ref": "#/definitions/ras.ModelFiles"
+                    "$ref": "#/definitions/tools.ModelFiles"
                 },
                 "type": {
                     "type": "string"
@@ -371,21 +371,21 @@ var doc = `{
                 }
             }
         },
-        "ras.ModelFiles": {
+        "tools.ModelFiles": {
             "type": "object",
             "properties": {
                 "inputFiles": {
-                    "$ref": "#/definitions/ras.InputFiles"
+                    "$ref": "#/definitions/tools.InputFiles"
                 },
                 "outputFiles": {
-                    "$ref": "#/definitions/ras.OutputFiles"
+                    "$ref": "#/definitions/tools.OutputFiles"
                 },
                 "supplementalFiles": {
-                    "$ref": "#/definitions/ras.SupplementalFiles"
+                    "$ref": "#/definitions/tools.SupplementalFiles"
                 }
             }
         },
-        "ras.OutputFiles": {
+        "tools.OutputFiles": {
             "type": "object",
             "properties": {
                 "modelPrediction": {
@@ -412,7 +412,7 @@ var doc = `{
                 }
             }
         },
-        "ras.SupplementalFiles": {
+        "tools.SupplementalFiles": {
             "type": "object",
             "properties": {
                 "observationalData": {

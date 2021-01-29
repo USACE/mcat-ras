@@ -3,11 +3,11 @@ Contains the HEC-RAS model content and analysis tool (MCAT). Given a .prj file, 
 
 The MCAT includes:
 - a standard set of methods to evaluate a model's content:
+    - isamodel
 	- modeltype
     - modelversion
-    - isamodel
+    - index
     - isgeospatial
-	- index
 	- geospatialdata
 - an API for executing the above methods.
 - a docker container for running the methods and API.
@@ -42,18 +42,18 @@ The following requests can be used to interrogate a model whose storage location
 
 `GET /isamodel?definition_file=<s3_key>`
 
-`GET /isgeospatial?definition_file=<s3_key>`
-
 `GET /modeltype?definition_file=<s3_key>`
 
 `GET /modelversion?definition_file=<s3_key>`
 
 `GET /index?definition_file=<s3_key>`
 
+`GET /isgeospatial?definition_file=<s3_key>`
+
 `GET /geospatialdata?definition_file=<s3_key>`
 
 
-*For example: `http://mcat-ras:5600/isamodel?definition_file=models/ras/ex_model.prj`*
+*For example: `http://mcat-ras:5600/isamodel?definition_file=models/ras/CHURCH HOUSE GULLY/CHURCH HOUSE GULLY.prj`*
 
 
 ### Swagger Documentation:
