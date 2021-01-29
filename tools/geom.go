@@ -16,18 +16,28 @@ type GeomFileContents struct {
 	ProgramVersion string                `json:"Program Version"`
 	Description    string                `json:"Description"`
 	Structures     []hydraulicStructures `json:"Hydraulic Structures"`
+	Notes          string
 }
 
 // getGeomData Reads a geometry file. returns none to allow concurrency
-func getGeomData(rm *RasModel, fn string, wg *sync.WaitGroup, errChan chan error) {
+func getGeomData(rm *RasModel, fn string, wg *sync.WaitGroup) {
 
 	defer wg.Done()
 
 	meta := GeomFileContents{Path: fn, FileExt: filepath.Ext(fn)}
 
+	var err error
+	msg := fmt.Sprintf("%s failed to process.", filepath.Base(fn))
+	defer func() {
+		meta.Notes += msg
+		rm.Metadata.GeomFiles = append(rm.Metadata.GeomFiles, meta)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}()
+
 	f, err := rm.FileStore.GetObject(fn)
 	if err != nil {
-		errChan <- err
 		return
 	}
 	defer f.Close()
@@ -52,7 +62,6 @@ func getGeomData(rm *RasModel, fn string, wg *sync.WaitGroup, errChan chan error
 			if header {
 				description, idx, err = getDescription(sc, idx, "END GEOM DESCRIPTION:")
 				if err != nil {
-					errChan <- err
 					return
 				}
 				meta.Description += description
@@ -71,6 +80,6 @@ func getGeomData(rm *RasModel, fn string, wg *sync.WaitGroup, errChan chan error
 			header = false
 		}
 	}
-	rm.Metadata.GeomFiles = append(rm.Metadata.GeomFiles, meta)
+	msg = ""
 	return
 }

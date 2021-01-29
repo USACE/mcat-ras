@@ -2,6 +2,7 @@ package tools
 
 import (
 	"bufio"
+	"fmt"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -21,15 +22,24 @@ type FlowFileContents struct {
 }
 
 // getGeomData Reads a flow file. returns none to allow concurrency
-func getFlowData(rm *RasModel, fn string, wg *sync.WaitGroup, errChan chan error) {
+func getFlowData(rm *RasModel, fn string, wg *sync.WaitGroup) {
 
 	defer wg.Done()
 
 	meta := FlowFileContents{Path: fn, FileExt: filepath.Ext(fn)}
 
+	var err error
+	msg := fmt.Sprintf("%s failed to process.", filepath.Base(fn))
+	defer func() {
+		meta.Notes += msg
+		rm.Metadata.FlowFiles = append(rm.Metadata.FlowFiles, meta)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}()
+
 	f, err := rm.FileStore.GetObject(fn)
 	if err != nil {
-		errChan <- err
 		return
 	}
 	defer f.Close()
@@ -41,9 +51,7 @@ func getFlowData(rm *RasModel, fn string, wg *sync.WaitGroup, errChan chan error
 		line = sc.Text()
 
 		match, err := regexp.MatchString("=", line)
-
 		if err != nil {
-			errChan <- err
 			return
 		}
 
@@ -68,6 +76,6 @@ func getFlowData(rm *RasModel, fn string, wg *sync.WaitGroup, errChan chan error
 		}
 	}
 
-	rm.Metadata.FlowFiles = append(rm.Metadata.FlowFiles, meta)
+	msg = ""
 	return
 }

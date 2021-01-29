@@ -25,7 +25,7 @@ func IsGeospatial(fs *filestore.FileStore) echo.HandlerFunc {
 
 		rm, err := ras.NewRasModel(definitionFile, *fs)
 		if err != nil {
-			return c.JSON(http.StatusOK, false)
+			return c.JSON(http.StatusInternalServerError, SimpleResponse{http.StatusInternalServerError, err.Error()})
 		}
 		isIt := rm.IsGeospatial()
 
