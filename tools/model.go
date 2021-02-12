@@ -4,8 +4,11 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"log"
 	"path/filepath"
 	"regexp"
+	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/USACE/filestore"
@@ -196,8 +199,23 @@ func (rm *RasModel) Index() Model {
 // IsGeospatial ...
 func (rm *RasModel) IsGeospatial() bool {
 	if rm.Metadata.Projection == "" {
-		fmt.Println("no valid coordinate reference system")
+		log.Println("no valid coordinate reference system")
 		return false
+	}
+	modelVersions := strings.Split(rm.Version, ",")
+	for _, version := range modelVersions {
+		if strings.Contains(version, ".g") {
+			geomVersion := strings.TrimSpace(strings.Split(version, ":")[1])
+			v, err := strconv.ParseFloat(geomVersion, 64)
+			if err != nil {
+				log.Println("could not convert the geometry version to a float")
+				return false
+			}
+			if v < 4 {
+				log.Printf("geometry file version: %f is not geospatial", v)
+				return false
+			}
+		}
 	}
 
 	return true
@@ -206,28 +224,27 @@ func (rm *RasModel) IsGeospatial() bool {
 // GeospatialData ...
 func (rm *RasModel) GeospatialData(destinationCRS int) (GeoData, error) {
 	gd := GeoData{}
+	if rm.IsGeospatial() {
+		modelUnits := rm.Metadata.ProjFileContents.Units
 
-	modelUnits := rm.Metadata.ProjFileContents.Units
+		sourceCRS := rm.Metadata.Projection
 
-	sourceCRS := rm.Metadata.Projection
-
-	if sourceCRS == "" {
-		return gd, errors.New("Cannot extract geospatial data, no valid coordinate reference system")
-	}
-
-	if err := checkUnitConsistency(modelUnits, sourceCRS); err != nil {
-		return gd, err
-	}
-
-	gd.Features = make(map[string]Features)
-	gd.Georeference = destinationCRS
-
-	for _, g := range rm.Metadata.GeomFiles {
-		if err := GetGeospatialData(&gd, rm.FileStore, g.Path, sourceCRS, destinationCRS); err != nil {
+		if err := checkUnitConsistency(modelUnits, sourceCRS); err != nil {
 			return gd, err
 		}
+
+		gd.Features = make(map[string]Features)
+		gd.Georeference = destinationCRS
+
+		for _, g := range rm.Metadata.GeomFiles {
+			if err := GetGeospatialData(&gd, rm.FileStore, g.Path, sourceCRS, destinationCRS); err != nil {
+				return gd, err
+			}
+		}
+		return gd, nil
 	}
-	return gd, nil
+	err := errors.New("the model is not geospatial")
+	return gd, err
 
 }
 
