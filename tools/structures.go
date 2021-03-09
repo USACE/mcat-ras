@@ -28,6 +28,19 @@ type hydraulicStructures struct {
 	WeirData    weirData    `json:"Inline Weir Data"`
 }
 
+type connections2d struct {
+	Name        string
+	Description string
+	UpSA        string      `json:"Connection Up SA"`
+	DnSA        string      `json:"Connection Dn SA"`
+	WeirWidth   float64     `json:"Weir Width"`
+	WeirElev    maxMinPairs `json:"Weir Elevations"`
+	NumGates    int         `json:"Num Gates"`
+	Gates       []gates
+	NumConduits int        `json:"Num Culvert Conduits"`
+	Conduits    []conduits `json:"Culvert Conduits"`
+}
+
 type culvertData struct {
 	NumCulverts int        `json:"Num Culverts"`
 	Culverts    []culverts `json:"Culverts"`
@@ -594,4 +607,85 @@ func getHydraulicStructureData(rm *RasModel, fn string, idx int) (hydraulicStruc
 	structures.WeirData = wData
 
 	return structures, nil
+}
+
+func getConnectionsData(rm *RasModel, fn string, i int) (connections2d, error) {
+	connection := connections2d{}
+
+	f, err := rm.FileStore.GetObject(fn)
+	if err != nil {
+		return connection, err
+	}
+	defer f.Close()
+
+	cSc := bufio.NewScanner(f)
+
+	ci := 0
+	for cSc.Scan() {
+		ci++
+		if ci == i {
+			lineData := strings.Split(rightofEquals(cSc.Text()), ",")
+			name := strings.TrimSpace(lineData[0])
+
+			connection.Name = name
+		} else if ci > i {
+			line := cSc.Text()
+			switch {
+			case strings.HasPrefix(line, "Connection Desc="):
+				description, _, err := getDescriptionConnections(cSc, 0, "Connection Line=")
+				if err != nil {
+					return connection, err
+				}
+				connection.Description += description
+
+			case strings.HasPrefix(line, "Connection Up SA="):
+				connection.UpSA = rightofEquals(line)
+
+			case strings.HasPrefix(line, "Connection Dn SA="):
+				connection.DnSA = rightofEquals(line)
+
+			case strings.HasPrefix(line, "Conn Weir WD="):
+				weirWidth, err := strconv.ParseFloat(strings.TrimSpace(rightofEquals(line)), 64)
+				if err != nil {
+					return connection, err
+				}
+				connection.WeirWidth = weirWidth
+
+			case strings.HasPrefix(line, "Conn Weir SE="):
+				nElev, err := strconv.Atoi(strings.TrimSpace(rightofEquals(line)))
+				if err != nil {
+					return connection, err
+				}
+				nLines := numberofLines(nElev*2, 80, 8)
+
+				elev, _, err := getMaxMinElev(cSc, 0, nLines, 0, 80, 8, 2)
+				if err != nil {
+					return connection, err
+				}
+				connection.WeirElev = elev
+
+			case strings.HasPrefix(line, "Conn Gate Name Wd,H,"):
+				cSc.Scan()
+				gate, err := getGates(cSc.Text())
+				if err != nil {
+					return connection, err
+				}
+				connection.Gates = append(connection.Gates, gate)
+				connection.NumGates++
+
+			case strings.HasPrefix(line, "Connection Culv="):
+				conduit, err := getConduits(line, false)
+				if err != nil {
+					return connection, err
+				}
+				connection.Conduits = append(connection.Conduits, conduit)
+				connection.NumConduits++
+
+			case strings.HasPrefix(line, "Conn Outlet Rating Curve="):
+				return connection, nil
+
+			}
+		}
+	}
+	return connection, nil
 }
