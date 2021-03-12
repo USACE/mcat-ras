@@ -409,6 +409,7 @@ func getStorageArea(sc *bufio.Scanner, transform gdal.CoordinateTransform) (Vect
 	return layer, err
 }
 
+// Extract name and geometry from BreakLine text block and return as Vector Layer
 func getBreakLine(sc *bufio.Scanner, transform gdal.CoordinateTransform) (VectorLayer, error) {
 	blName := rightofEquals(sc.Text())
 	layer := VectorLayer{FeatureName: blName}
@@ -418,6 +419,11 @@ func getBreakLine(sc *bufio.Scanner, transform gdal.CoordinateTransform) (Vector
 		return layer, err
 	}
 
+	// If less than 2 xyPairs, it is not a valid line.
+	if len(xyPairs) < 2 {
+		return layer, errors.New("Invalid Line Geometry")
+	}
+
 	xyLineString := gdal.Create(gdal.GT_LineString)
 	for _, pair := range xyPairs {
 		xyLineString.AddPoint2D(pair[0], pair[1])
@@ -437,6 +443,7 @@ func getBreakLine(sc *bufio.Scanner, transform gdal.CoordinateTransform) (Vector
 	return layer, err
 }
 
+// Extract name and geometry from Boundary Condition text block and return as Vector Layer
 func getBCLine(sc *bufio.Scanner, transform gdal.CoordinateTransform) (VectorLayer, error) {
 	bcName := rightofEquals(sc.Text())
 	layer := VectorLayer{FeatureName: bcName}
@@ -446,6 +453,11 @@ func getBCLine(sc *bufio.Scanner, transform gdal.CoordinateTransform) (VectorLay
 		return layer, err
 	}
 
+	// If less than 2 xyPairs, it is not a valid line.
+	if len(xyPairs) < 2 {
+		return layer, errors.New("Invalid Line Geometry")
+	}
+
 	xyLineString := gdal.Create(gdal.GT_LineString)
 	for _, pair := range xyPairs {
 		xyLineString.AddPoint2D(pair[0], pair[1])
@@ -465,12 +477,18 @@ func getBCLine(sc *bufio.Scanner, transform gdal.CoordinateTransform) (VectorLay
 	return layer, err
 }
 
+// Extract name and geometry from Connection text block and return as Vector Layer
 func getConnectionLine(sc *bufio.Scanner, transform gdal.CoordinateTransform) (VectorLayer, error) {
 	layer := VectorLayer{FeatureName: strings.TrimSpace(strings.Split(rightofEquals(sc.Text()), ",")[0])}
 
 	xyPairs, err := getDataPairsfromTextBlock("Connection Line=", sc, 64, 16)
 	if err != nil {
 		return layer, err
+	}
+
+	// If less than 2 xyPairs, it is not a valid line.
+	if len(xyPairs) < 2 {
+		return layer, errors.New("Invalid Line Geometry")
 	}
 
 	xyLineString := gdal.Create(gdal.GT_LineString)
@@ -544,28 +562,48 @@ func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string,
 
 		case strings.HasPrefix(line, "BreakLine Name="):
 			blLayer, err := getBreakLine(sc, transform)
-			if err != nil {
-				return err
+			switch {
+			case err != nil:
+				switch {
+				case err.Error() == "Invalid Line Geometry":
+					log.Println(blLayer.FeatureName, err.Error())
+				default:
+					return err
+				}
+			default:
+				f.BreakLines = append(f.BreakLines, blLayer)
+				log.Println("Extracted break line")
 			}
-			f.BreakLines = append(f.BreakLines, blLayer)
-			log.Println("Extracted break line")
 
 		case strings.HasPrefix(line, "BC Line Name="):
 			bcLayer, err := getBCLine(sc, transform)
-			if err != nil {
-				return err
+			switch {
+			case err != nil:
+				switch {
+				case err.Error() == "Invalid Line Geometry":
+					log.Println(bcLayer.FeatureName, err.Error())
+				default:
+					return err
+				}
+			default:
+				f.BCLines = append(f.BCLines, bcLayer)
+				log.Println("Extracted boundary conditions line")
 			}
-			f.BCLines = append(f.BCLines, bcLayer)
-			log.Println("Extracted boundary conditions line")
 
 		case strings.HasPrefix(line, "Connection="):
 			connLayer, err := getConnectionLine(sc, transform)
-			if err != nil {
-				return err
+			switch {
+			case err != nil:
+				switch {
+				case err.Error() == "Invalid Line Geometry":
+					log.Println(connLayer.FeatureName, err.Error())
+				default:
+					return err
+				}
+			default:
+				f.Connections = append(f.Connections, connLayer)
+				log.Println("Extracted connection line")
 			}
-			f.Connections = append(f.Connections, connLayer)
-			log.Println("Extracted connection line")
-
 		}
 	}
 
