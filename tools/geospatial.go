@@ -566,7 +566,7 @@ func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string,
 			case err != nil:
 				switch {
 				case err.Error() == "Invalid Line Geometry":
-					log.Println(blLayer.FeatureName, err.Error())
+					log.Println("Skipped", blLayer.FeatureName, err.Error())
 				default:
 					return err
 				}
@@ -581,7 +581,7 @@ func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string,
 			case err != nil:
 				switch {
 				case err.Error() == "Invalid Line Geometry":
-					log.Println(bcLayer.FeatureName, err.Error())
+					log.Println("Skipped", bcLayer.FeatureName, err.Error())
 				default:
 					return err
 				}
@@ -596,7 +596,7 @@ func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string,
 			case err != nil:
 				switch {
 				case err.Error() == "Invalid Line Geometry":
-					log.Println(connLayer.FeatureName, err.Error())
+					log.Println("Skipped", connLayer.FeatureName, err.Error())
 				default:
 					return err
 				}
