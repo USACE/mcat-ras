@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"path/filepath"
 	"regexp"
@@ -272,7 +271,7 @@ func getXSBanks(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReac
 	if err != nil {
 		return xsLayer, bankLayers, err
 	}
-	log.Println("Extracted cross-section")
+
 	if xsLayer.Fields["CutLineProfileMatch"].(bool) {
 		for sc.Scan() {
 			line := sc.Text()
@@ -285,7 +284,7 @@ func getXSBanks(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReac
 			}
 		}
 	}
-	log.Println("Extracted banks")
+
 	return xsLayer, bankLayers, err
 }
 
@@ -411,7 +410,6 @@ func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string,
 	geomFileName := filepath.Base(geomFilePath)
 	f := Features{}
 	riverReachName := ""
-	log.Println("Extracting geospatial data from:", geomFilePath)
 
 	file, err := fs.GetObject(geomFilePath)
 	if err != nil {
@@ -437,7 +435,6 @@ func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string,
 			}
 			f.Rivers = append(f.Rivers, riverLayer)
 			riverReachName = riverLayer.FeatureName
-			log.Println("Extracted river centerline")
 
 		case strings.HasPrefix(line, "Storage Area="):
 			storageAreaLayer, err := getStorageArea(sc, transform)
@@ -445,7 +442,6 @@ func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string,
 				return err
 			}
 			f.StorageAreas = append(f.StorageAreas, storageAreaLayer)
-			log.Println("Extracted storage area")
 
 		case strings.HasPrefix(line, "Type RM Length L Ch R = 1"):
 			xsLayer, bankLayers, err := getXSBanks(sc, transform, riverReachName)
@@ -454,7 +450,6 @@ func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string,
 			}
 			f.XS = append(f.XS, xsLayer)
 			f.Banks = append(f.Banks, bankLayers...)
-			log.Println("Extracted banks and cross-sections")
 
 		}
 	}
