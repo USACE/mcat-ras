@@ -52,7 +52,7 @@ func UpsertRasGeometry(ac *config.APIConfig, db *sqlx.DB) echo.HandlerFunc {
 }
 
 // VacuumRasViews ...
-func VacuumRasViews(ac *config.APIConfig, db *sqlx.DB) echo.HandlerFunc {
+func VacuumRasViews(db *sqlx.DB) echo.HandlerFunc {
 	return func(c echo.Context) error {
 
 		for _, query := range vacuumQuery {
@@ -62,6 +62,14 @@ func VacuumRasViews(ac *config.APIConfig, db *sqlx.DB) echo.HandlerFunc {
 			}
 		}
 
+		return c.JSON(http.StatusOK, "Ras tables vacuumed successfully.")
+	}
+}
+
+// RefreshRasViews ...
+func RefreshRasViews(db *sqlx.DB) echo.HandlerFunc {
+	return func(c echo.Context) error {
+
 		for _, query := range refreshViewsQuery {
 			_, err := db.Exec(query)
 			if err != nil {
@@ -69,6 +77,6 @@ func VacuumRasViews(ac *config.APIConfig, db *sqlx.DB) echo.HandlerFunc {
 			}
 		}
 
-		return c.JSON(http.StatusOK, "Materialized views for ras tables vacuumed and refreshed successfully.")
+		return c.JSON(http.StatusOK, "Ras materialized views refreshed successfully.")
 	}
 }

@@ -36,9 +36,10 @@ func main() {
 	e.GET("/geospatialdata", handlers.GeospatialData(appConfig))
 
 	// pgdb endpoints
-	e.POST("/upsert/ras_model", pgdb.UpsertRasModel(appConfig, dbConfig))
-	e.POST("/upsert/ras_geometry", pgdb.UpsertRasGeometry(appConfig, dbConfig))
-	e.POST("/refresh/ras_tables", pgdb.UpsertRasGeometry(appConfig, dbConfig))
+	e.POST("/upsert/model", pgdb.UpsertRasModel(appConfig, dbConfig))
+	e.POST("/upsert/geometry", pgdb.UpsertRasGeometry(appConfig, dbConfig))
+	e.POST("/refresh", pgdb.RefreshRasViews(dbConfig))
+	e.POST("/vacuum", pgdb.VacuumRasViews(dbConfig))
 
 	e.Logger.Fatal(e.Start(appConfig.Address()))
 }
