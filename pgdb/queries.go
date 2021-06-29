@@ -26,21 +26,19 @@ var (
 			collection_id, 
 			name,
 			type, 
-			map,
 			s3_key, 
 			model_metadata, 
 			etl_metadata
 			) 
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		ON CONFLICT (s3_key)
 		DO UPDATE SET 
 			collection_id = $1, 
 			name = $2, 
 			type = $3, 
-			map = $4,
-			s3_key = $5, 
-			model_metadata = $6, 
-			etl_metadata = $7
+			s3_key = $4, 
+			model_metadata = $5, 
+			etl_metadata = $6
 		RETURNING model_inventory_id;
 	`
 

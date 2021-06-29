@@ -148,7 +148,9 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 				geometryFile.GeomTitle,
 				geometryFile.ProgramVersion,
 				geometryFile.Description); err != nil {
-				fmt.Println(err)
+				fmt.Println("Geometry File|", err)
+				tx.Rollback()
+				return err
 			}
 
 			// Iterate over features in geometry file and add to tables as needed
