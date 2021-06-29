@@ -3,8 +3,9 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/USACE/mcat-ras/config"
-	ras "github.com/USACE/mcat-ras/tools"
+	"app/config"
+
+	ras "app/tools"
 
 	"github.com/labstack/echo/v4"
 )
