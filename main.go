@@ -38,6 +38,7 @@ func main() {
 	// pgdb endpoints
 	e.POST("/upsert/ras_model", pgdb.UpsertRasModel(appConfig, dbConfig))
 	e.POST("/upsert/ras_geometry", pgdb.UpsertRasGeometry(appConfig, dbConfig))
+	e.POST("/refresh/ras_tables", pgdb.UpsertRasGeometry(appConfig, dbConfig))
 
 	e.Logger.Fatal(e.Start(appConfig.Address()))
 }

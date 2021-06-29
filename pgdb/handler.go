@@ -50,3 +50,25 @@ func UpsertRasGeometry(ac *config.APIConfig, db *sqlx.DB) echo.HandlerFunc {
 		return c.JSON(http.StatusOK, "Successfully uploaded model geometry for "+definitionFile)
 	}
 }
+
+// VacuumRasViews ...
+func VacuumRasViews(ac *config.APIConfig, db *sqlx.DB) echo.HandlerFunc {
+	return func(c echo.Context) error {
+
+		for _, query := range vacuumQuery {
+			_, err := db.Exec(query)
+			if err != nil {
+				return c.JSON(http.StatusNotAcceptable, err)
+			}
+		}
+
+		for _, query := range refreshViewsQuery {
+			_, err := db.Exec(query)
+			if err != nil {
+				return c.JSON(http.StatusNotAcceptable, err)
+			}
+		}
+
+		return c.JSON(http.StatusOK, "Materialized views for ras tables vacuumed and refreshed successfully.")
+	}
+}

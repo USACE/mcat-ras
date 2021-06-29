@@ -134,3 +134,21 @@ var (
 		RETURNING geometry_file_id;
 	`
 )
+
+// VacuumQuery ...
+var vacuumQuery []string = []string{"VACUUM ANALYZE models.ras;",
+	"VACUUM ANALYZE models.ras_geometry_files;",
+	"VACUUM ANALYZE models.ras_rivers;",
+	"VACUUM ANALYZE models.ras_xs;",
+	"VACUUM ANALYZE models.ras_banks;",
+	"VACUUM ANALYZE models.ras_storage_areas;",
+	"VACUUM ANALYZE models.ras_two_d_areas;",
+	"VACUUM ANALYZE models.ras_hydraulic_structures;"}
+
+// RefreshViewsQuery ...
+var refreshViewsQuery []string = []string{"REFRESH MATERIALIZED VIEW models.ras_project_metadata;",
+	"REFRESH MATERIALIZED VIEW models.ras_plan_metadata;",
+	"REFRESH MATERIALIZED VIEW models.ras_flow_metadata;",
+	"REFRESH MATERIALIZED VIEW models.ras_geometry_metadata;",
+	"REFRESH MATERIALIZED VIEW models.ras_rivers_metadata;",
+	"REFRESH MATERIALIZED VIEW models.ras_convexhull;"}
