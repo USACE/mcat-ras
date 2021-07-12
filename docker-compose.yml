@@ -3,6 +3,8 @@ version: "3.4"
 services:
   mcat-ras:
     build:
+      target: build
+      # target: prod
       context: ./
     volumes:
       - ./:/app
@@ -10,4 +12,3 @@ services:
       - 5600:5600
     env_file:
       - ./.env
-    entrypoint: CompileDaemon --build="go build main.go" --command=./main

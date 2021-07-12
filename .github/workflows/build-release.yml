@@ -1,0 +1,35 @@
+name: CI RAS Pipeline
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-container:
+    name: Build Docker Container
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Build Container
+        run: |
+          docker build . --target prod -t dewberrycsi/mcat-ras:v2-dev-latest
+      - name: Bump a new Release and update Version
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: "0"
+      - name: Bump version and push tag
+        uses: anothrNick/github-tag-action@1.26.0
+        id: update-tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WITH_V: true
+          RELEASE_BRANCHES: dev
+      - name: Login to DockerHub
+        env:
+          DOCKER_USER: ${{secrets.DOCKER_USER}}
+          DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
+        run: |
+          docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
+      - name: Push Container to DockerHub
+        run: |
+          docker push dewberrycsi/mcat-ras:v2-dev-latest
