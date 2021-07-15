@@ -5,10 +5,10 @@ CREATE MATERIALIZED VIEW models.ras_project_metadata AS
 SELECT
     models.model_inventory_id,
     c.collection_id AS collection,
-    (models.model_metadata -> 'Metadata' -> 'ProjFileContents' ->> 'ProjTitle' ) AS title,
-    (models.model_metadata -> 'Metadata' -> 'ProjFileContents' ->> 'Description') AS description,
-    (models.model_metadata -> 'Metadata' -> 'ProjFileContents' ->> 'Units') AS units,
-    (models.model_metadata -> 'Metadata' -> 'ProjFileContents' ->> 'CurrentPlan') AS current_plan,
+    (models.model_metadata -> 'ProjFileContents' ->> 'ProjTitle' ) AS title,
+    (models.model_metadata -> 'ProjFileContents' ->> 'Description') AS description,
+    (models.model_metadata -> 'ProjFileContents' ->> 'Units') AS units,
+    (models.model_metadata -> 'ProjFileContents' ->> 'CurrentPlan') AS current_plan,
     models.s3_key AS s3_key
 FROM models.model AS models
 LEFT JOIN inventory.collections AS c USING (collection_id)
@@ -19,9 +19,9 @@ CREATE MATERIALIZED VIEW models.ras_plan_metadata AS
 with plan_files as (
     SELECT
         model_inventory_id,
-        json_array_elements(model_metadata -> 'Metadata' -> 'PlanFiles') as metadata
+        json_array_elements(model_metadata -> 'PlanFiles') as metadata
     FROM models.model
-    WHERE (model_metadata -> 'Metadata' ->> 'PlanFiles') IS NOT NULL
+    WHERE (model_metadata ->> 'PlanFiles') IS NOT NULL
 )
 SELECT
     model_inventory_id,
@@ -44,9 +44,9 @@ CREATE MATERIALIZED VIEW models.ras_flow_metadata AS
 with flow_files as (
     SELECT
         model_inventory_id,
-        json_array_elements(model_metadata -> 'Metadata' -> 'FlowFiles') as metadata
+        json_array_elements(model_metadata -> 'FlowFiles') as metadata
     FROM models.model
-    WHERE (model_metadata -> 'Metadata' ->> 'FlowFiles') IS NOT NULL
+    WHERE (model_metadata ->> 'FlowFiles') IS NOT NULL
 )
 SELECT
     model_inventory_id,
@@ -64,9 +64,9 @@ CREATE MATERIALIZED VIEW models.ras_geometry_metadata AS
 with geom_files as (
     SELECT
         model_inventory_id,
-        json_array_elements(model_metadata -> 'Metadata' -> 'GeomFiles') as metadata
+        json_array_elements(model_metadata -> 'GeomFiles') as metadata
     FROM models.model
-    WHERE (model_metadata -> 'Metadata' ->> 'GeomFiles') IS NOT NULL
+    WHERE (model_metadata ->> 'GeomFiles') IS NOT NULL
 )
 SELECT
     model_inventory_id,
@@ -85,9 +85,9 @@ CREATE MATERIALIZED VIEW models.ras_rivers_metadata AS
 with geom_files as (
     SELECT
         model_inventory_id,
-        json_array_elements(model_metadata -> 'Metadata' -> 'GeomFiles') as metadata
+        json_array_elements(model_metadata -> 'GeomFiles') as metadata
     FROM models.model
-    WHERE (model_metadata -> 'Metadata' ->> 'GeomFiles') IS NOT NULL
+    WHERE (model_metadata ->> 'GeomFiles') IS NOT NULL
 ),
 hydraulic_structures as (
     SELECT
