@@ -21,10 +21,8 @@ type ETLMetaData struct {
 }
 
 func getCollectionID(tx *sqlx.Tx, definitionFile string) (collectionID int, err error) {
-	fileParts := strings.Split(definitionFile, "/")
-	dataCollection := fileParts[len(fileParts)-3]
 
-	if err := tx.Get(&collectionID, getCollectionIDSQL, dataCollection); err != nil {
+	if err := tx.Get(&collectionID, getCollectionIDSQL, definitionFile); err != nil {
 		return 0, err
 	}
 	return collectionID, nil
