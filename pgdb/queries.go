@@ -1,11 +1,16 @@
 package pgdb
 
+import (
+	"fmt"
+	"os"
+)
+
 var (
-	getCollectionIDSQL string = `
+	getCollectionIDSQL string = fmt.Sprintf(`
 		SELECT collection_id 
 		FROM inventory.collections 
-		WHERE title = $1;
-		`
+		WHERE STRING_TO_ARRAY($1, '/') @> STRING_TO_ARRAY(TRIM(REPLACE(s3_prefix, 's3://%s/', ''), '/'),'/');`,
+		os.Getenv("S3_BUCKET"))
 
 	getModelIDSQL string = `
 		SELECT model_inventory_id 
