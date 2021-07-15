@@ -51,7 +51,7 @@ func upsertModel(tx *sqlx.Tx, rm *ras.RasModel, definitionFile string, collectio
 		return 0, err
 	}
 
-	if err := tx.Get(&modelID, upsertModelSQL, collectionID, modelName, rm.Type, etlMeta, definitionFile, modelMeta, etlMeta); err != nil {
+	if err := tx.Get(&modelID, upsertModelSQL, collectionID, modelName, rm.Type, definitionFile, modelMeta, etlMeta); err != nil {
 		return 0, err
 	}
 

@@ -23,7 +23,7 @@ func UpsertRasModel(ac *config.APIConfig, db *sqlx.DB) echo.HandlerFunc {
 
 		err := upsertModelInfo(definitionFile, ac, db)
 		if err != nil {
-			return c.JSON(http.StatusNotAcceptable, err)
+			return c.JSON(http.StatusInternalServerError, err)
 		}
 
 		return c.JSON(http.StatusOK, "Successfully uploaded model information for "+definitionFile)
@@ -44,7 +44,7 @@ func UpsertRasGeometry(ac *config.APIConfig, db *sqlx.DB) echo.HandlerFunc {
 
 		err := upsertModelGeometry(definitionFile, ac, db)
 		if err != nil {
-			return c.JSON(http.StatusNotAcceptable, err)
+			return c.JSON(http.StatusInternalServerError, err)
 		}
 
 		return c.JSON(http.StatusOK, "Successfully uploaded model geometry for "+definitionFile)
@@ -58,7 +58,7 @@ func VacuumRasViews(db *sqlx.DB) echo.HandlerFunc {
 		for _, query := range vacuumQuery {
 			_, err := db.Exec(query)
 			if err != nil {
-				return c.JSON(http.StatusNotAcceptable, err)
+				return c.JSON(http.StatusInternalServerError, err)
 			}
 		}
 
@@ -73,7 +73,7 @@ func RefreshRasViews(db *sqlx.DB) echo.HandlerFunc {
 		for _, query := range refreshViewsQuery {
 			_, err := db.Exec(query)
 			if err != nil {
-				return c.JSON(http.StatusNotAcceptable, err)
+				return c.JSON(http.StatusInternalServerError, err)
 			}
 		}
 

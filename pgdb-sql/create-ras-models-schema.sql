@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS models.column_reference(
 -- Create models.model table
 /*---------------------------------------------------------------------------*/
 CREATE TABLE IF NOT EXISTS models.model (
-    model_inventory_id BIGINT PRIMARY KEY,
+    model_inventory_id BIGSERIAL PRIMARY KEY,
     collection_id BIGINT,
     name TEXT,
     type TEXT,
