@@ -282,14 +282,14 @@ func getProjection(rm *RasModel, fn string, wg *sync.WaitGroup) {
 	sourceSpRef := gdal.CreateSpatialReference(line)
 	if err := sourceSpRef.Validate(); err != nil {
 		if filepath.Ext(fn) == ".prj" {
-			fmt.Println(fmt.Sprintf("%s is not a valid projection file, check that there are not multiple project files.\n", fn))
+			fmt.Println(fmt.Sprintf("%s is not a valid projection file.\n", fn))
 		} else {
 			fmt.Println(err)
 		}
 		return
 	}
 	if rm.Metadata.Projection != "" {
-		fmt.Println("Multiple projection files identified, cannot determine coordinate reference system")
+		fmt.Println("Projection already assigned to the model from another file in the directory.")
 		return
 	}
 
@@ -319,6 +319,11 @@ func NewRasModel(key string, fs filestore.FileStore) (*RasModel, error) {
 
 	var rasWG rasWaitGroup
 
+	// get projection using name.projection file
+	rasWG.Projection.Add(1)
+	projecFile := strings.TrimSuffix(key, ".prj") + ".projection"
+	go getProjection(&rm, projecFile, &rasWG.Projection)
+
 	for _, fp := range rm.FileList {
 
 		ext := filepath.Ext(fp)
@@ -337,7 +342,7 @@ func NewRasModel(key string, fs filestore.FileStore) (*RasModel, error) {
 			rasWG.Flow.Add(1)
 			go getFlowData(&rm, fp, &rasWG.Flow)
 
-		case rasRE.Projection.MatchString(ext):
+		case rm.Metadata.Projection == "" && rasRE.Projection.MatchString(ext):
 			if filepath.Base(key) != filepath.Base(fp) {
 				rasWG.Projection.Add(1)
 				go getProjection(&rm, fp, &rasWG.Projection)
