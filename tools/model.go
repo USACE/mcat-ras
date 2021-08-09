@@ -343,7 +343,7 @@ func NewRasModel(key string, fs filestore.FileStore) (*RasModel, error) {
 			go getFlowData(&rm, fp, &rasWG.Flow)
 
 		case rm.Metadata.Projection == "" && rasRE.Projection.MatchString(ext):
-			if filepath.Base(key) != filepath.Base(fp) {
+			if filepath.Base(key) != filepath.Base(fp) && fp != projecFile {
 				rasWG.Projection.Add(1)
 				go getProjection(&rm, fp, &rasWG.Projection)
 			}
