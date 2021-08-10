@@ -23,6 +23,9 @@ func ModelType(fs *filestore.FileStore) echo.HandlerFunc {
 	return func(c echo.Context) error {
 
 		definitionFile := c.QueryParam("definition_file")
+		if definitionFile == "" {
+			return c.JSON(http.StatusBadRequest, "Missing query parameter: `definition_file`")
+		}
 
 		rm, err := ras.NewRasModel(definitionFile, *fs)
 		if err != nil {
