@@ -281,15 +281,12 @@ func getProjection(rm *RasModel, fn string, wg *sync.WaitGroup) {
 
 	sourceSpRef := gdal.CreateSpatialReference(line)
 	if err := sourceSpRef.Validate(); err != nil {
-		if filepath.Ext(fn) == ".prj" {
-			fmt.Println(fmt.Sprintf("%s is not a valid projection file.\n", fn))
-		} else {
-			fmt.Println(err)
-		}
+		fmt.Println(fmt.Sprintf("%s is not a valid projection file.\n", fn))
+		fmt.Println(err)
 		return
 	}
 	if rm.Metadata.Projection != "" {
-		fmt.Println("Projection already assigned to the model from another file in the directory.")
+		fmt.Println("Projection already exist for the model.")
 		return
 	}
 
