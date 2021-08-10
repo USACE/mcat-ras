@@ -257,7 +257,12 @@ func getModelFiles(rm *RasModel) error {
 	}
 
 	for _, file := range *files {
-		rm.FileList = append(rm.FileList, filepath.Join(file.Path, file.Name))
+		// get only files that share the same base name or .prj files for projection
+		// rational behind .prj file is that there can be a shp file in the same level of Hec-RAS
+		// providing potential projection
+		if strings.HasPrefix(filepath.Join(file.Path, file.Name), strings.TrimSuffix(rm.Metadata.ProjFilePath, "prj")) || filepath.Ext(file.Name) == ".prj" {
+			rm.FileList = append(rm.FileList, filepath.Join(file.Path, file.Name))
+		}
 	}
 
 	return nil
@@ -270,7 +275,6 @@ func getProjection(rm *RasModel, fn string, wg *sync.WaitGroup) {
 
 	f, err := rm.FileStore.GetObject(fn)
 	if err != nil {
-		fmt.Println(err)
 		return
 	}
 	defer f.Close()
@@ -282,7 +286,6 @@ func getProjection(rm *RasModel, fn string, wg *sync.WaitGroup) {
 	sourceSpRef := gdal.CreateSpatialReference(line)
 	if err := sourceSpRef.Validate(); err != nil {
 		fmt.Println(fmt.Sprintf("%s is not a valid projection file.\n", fn))
-		fmt.Println(err)
 		return
 	}
 	if rm.Metadata.Projection != "" {
