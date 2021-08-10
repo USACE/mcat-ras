@@ -35,7 +35,7 @@ func getModelID(tx *sqlx.Tx, definitionFile string) (modelID int, err error) {
 	return modelID, nil
 }
 
-func upsertModel(tx *sqlx.Tx, rm *ras.RasModel, definitionFile string, collectionID int) (modelID byte, err error) {
+func upsertModel(tx *sqlx.Tx, rm *ras.RasModel, definitionFile string, collectionID int) (modelID int, err error) {
 	projFileName := filepath.Base(definitionFile)
 	modelName := strings.TrimSuffix(projFileName, filepath.Ext(projFileName))
 
