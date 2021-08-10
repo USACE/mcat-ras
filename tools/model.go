@@ -257,7 +257,10 @@ func getModelFiles(rm *RasModel) error {
 	}
 
 	for _, file := range *files {
-		rm.FileList = append(rm.FileList, filepath.Join(file.Path, file.Name))
+		// get only files that share the same base name
+		if strings.HasPrefix(filepath.Join(file.Path, file.Name), strings.TrimSuffix(rm.Metadata.ProjFilePath, "prj")) {
+			rm.FileList = append(rm.FileList, filepath.Join(file.Path, file.Name))
+		}
 	}
 
 	return nil
@@ -270,7 +273,6 @@ func getProjection(rm *RasModel, fn string, wg *sync.WaitGroup) {
 
 	f, err := rm.FileStore.GetObject(fn)
 	if err != nil {
-		fmt.Println(err)
 		return
 	}
 	defer f.Close()
