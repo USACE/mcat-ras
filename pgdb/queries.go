@@ -7,9 +7,9 @@ import (
 
 var (
 	getCollectionIDSQL string = fmt.Sprintf(`
-		SELECT collection_id 
-		FROM inventory.collections 
-		WHERE STRING_TO_ARRAY($1, '/') @> STRING_TO_ARRAY(TRIM(REPLACE(s3_prefix, 's3://%s/', ''), '/'),'/');`,
+	SELECT collection_id 
+	FROM inventory.collections 
+	WHERE 's3://%s/' || $1 LIKE s3_prefix || '%';`,
 		os.Getenv("S3_BUCKET"))
 
 	getModelIDSQL string = `
