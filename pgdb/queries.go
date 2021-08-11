@@ -9,8 +9,7 @@ var (
 	getCollectionIDSQL string = fmt.Sprintf(`
 	SELECT collection_id 
 	FROM inventory.collections 
-	WHERE 's3://%s/' || $1 LIKE s3_prefix || '%';`,
-		os.Getenv("S3_BUCKET"))
+	WHERE 's3://%s/'`, os.Getenv("S3_BUCKET")+` || $1 LIKE s3_prefix || '%';`)
 
 	getModelIDSQL string = `
 		SELECT model_inventory_id 
