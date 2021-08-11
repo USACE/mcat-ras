@@ -4,6 +4,7 @@ import (
 	"app/config"
 	ras "app/tools"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
@@ -138,13 +139,18 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 		for _, geometryFile := range rm.Metadata.GeomFiles {
 			var geometryFileID int
 
+			var version interface{} = geometryFile.ProgramVersion
+			if geometryFile.ProgramVersion == "" {
+				version = sql.NullFloat64{Float64: 0.0, Valid: false}
+			} // doing this to prevent SQL error when inserting "" to a numeric field
+
 			// Add Geometry file to database
 			if err = tx.Get(&geometryFileID, upsertGeometrySQL,
 				modelID,
 				geometryFile.Path,
 				geometryFile.FileExt,
 				geometryFile.GeomTitle,
-				geometryFile.ProgramVersion,
+				version,
 				geometryFile.Description); err != nil {
 				fmt.Println("Geometry File|", err)
 				tx.Rollback()
