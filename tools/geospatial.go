@@ -56,7 +56,6 @@ func checkUnitConsistency(modelUnits string, sourceCRS string) error {
 				return nil
 		}
 	}
-		fmt.Println(modelUnits, crsUnits)
 		return errors.New("The unit system of the model and coordinate reference system are inconsistent")
 	}
 	return errors.New("Unable to check unit consistency, could not identify the coordinate reference system's units")

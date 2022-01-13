@@ -3,6 +3,7 @@ package tools
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -32,7 +33,7 @@ func getGeomData(rm *RasModel, fn string, wg *sync.WaitGroup) {
 		meta.Notes += msg
 		rm.Metadata.GeomFiles = append(rm.Metadata.GeomFiles, meta)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		}
 	}()
 
@@ -70,7 +71,7 @@ func getGeomData(rm *RasModel, fn string, wg *sync.WaitGroup) {
 		case strings.HasPrefix(line, "River Reach="):
 			structures, err := getHydraulicStructureData(rm, fn, idx)
 			if err != nil {
-				fmt.Println("Hydraulic Structures|", meta.FileExt, err)
+				log.Println("Hydraulic Structures|", meta.FileExt, err)
 				continue
 			}
 			meta.Structures = append(meta.Structures, structures)

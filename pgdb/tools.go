@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -75,7 +76,7 @@ func upsertModelInfo(definitionFile string, ac *config.APIConfig, db *sqlx.DB) e
 	ctx := context.Background()
 	tx, err := db.BeginTxx(ctx, nil)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return err
 	}
 
@@ -86,14 +87,14 @@ func upsertModelInfo(definitionFile string, ac *config.APIConfig, db *sqlx.DB) e
 
 	collectionID, err := getCollectionID(tx, definitionFile)
 	if err != nil {
-		fmt.Println("Collection ID:", collectionID, err)
+		log.Println("Collection ID:", collectionID, err)
 		return err
 	}
 
 	modelID, err := upsertModel(tx, rm, definitionFile, collectionID)
 	if err != nil {
 		fmt.Println("Model ID:", modelID, "Name|", definitionFile)
-		fmt.Println("Error: ", err, "Rolling back")
+		log.Println("Error: ", err, "Rolling back")
 		tx.Rollback()
 		return err
 	}
@@ -101,7 +102,7 @@ func upsertModelInfo(definitionFile string, ac *config.APIConfig, db *sqlx.DB) e
 	err = tx.Commit()
 	if err != nil {
 		fmt.Println("Model ID:", modelID, "Name|", definitionFile)
-		fmt.Println("Transaction Commit Error|", err)
+		log.Println("Transaction Commit Error|", err)
 		return err
 	}
 
@@ -112,7 +113,7 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 	ctx := context.Background()
 	tx, err := db.BeginTxx(ctx, nil)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return err
 	}
 
@@ -124,7 +125,7 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 	modelID, err := getModelID(tx, definitionFile)
 	fmt.Println("Model ID:", modelID, "Name|", definitionFile)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return err
 	}
 
@@ -152,7 +153,7 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 				geometryFile.GeomTitle,
 				version,
 				geometryFile.Description); err != nil {
-				fmt.Println("Geometry File", geometryFile.FileExt, "|", err)
+				log.Println("Geometry File", geometryFile.FileExt, "|", err)
 				tx.Rollback()
 				return err
 			}
@@ -168,7 +169,7 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 			for _, river := range features.Rivers {
 				riverID, err := upsertRiver(tx, river, geometryFileID)
 				if err != nil {
-					fmt.Println(err)
+					log.Println(err)
 					tx.Rollback()
 					return err
 				}
@@ -183,14 +184,14 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 				cutLineProfileMatch := xs.Fields["CutLineProfileMatch"]
 				xsStation, err := strconv.ParseFloat(xs.FeatureName, 64)
 				if err != nil {
-					fmt.Println("XS", geometryFile.FileExt, "|", err)
+					log.Println("XS", geometryFile.FileExt, "|", err)
 					tx.Rollback()
 					return err
 				}
 
 				riverID := riverIDMap[riverReach.(string)]
 				if err = tx.Get(&xsID, upsertXSSQL, riverID, xsStation, cutLineProfileMatch, xs.Geometry); err != nil {
-					fmt.Println(err)
+					log.Println(err)
 					tx.Rollback()
 					return err
 				}
@@ -209,7 +210,7 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 
 				_, err = tx.Exec(upsertBanksSQL, xsID, bankStation, banks.Geometry)
 				if err != nil {
-					fmt.Println("Banks", geometryFile.FileExt, "|", err)
+					log.Println("Banks", geometryFile.FileExt, "|", err)
 					tx.Rollback()
 					return err
 				}
@@ -219,7 +220,7 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 			for _, storageArea := range features.StorageAreas {
 				_, err = tx.Exec(upsertStorageAreasSQL, geometryFileID, storageArea.FeatureName, storageArea.Geometry)
 				if err != nil {
-					fmt.Println("Storage Areas", geometryFile.FileExt, "|", err)
+					log.Println("Storage Areas", geometryFile.FileExt, "|", err)
 					tx.Rollback()
 					return err
 				}
@@ -228,7 +229,7 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 		
 		err = tx.Commit()
 		if err != nil {
-			fmt.Println("Transaction Commit Error|", err)
+			log.Println("Transaction Commit Error|", err)
 			return err
 		}
 
