@@ -2,7 +2,6 @@ package tools
 
 import (
 	"bufio"
-	"errors"
 	"math"
 	"strconv"
 	"strings"
@@ -330,14 +329,11 @@ func getCulvertData(hsSc *bufio.Scanner, i int, lineData []string) (culverts, in
 			culvert.Conduits = append(culvert.Conduits, conduit)
 			culvert.NumConduits++
 
-		case strings.HasPrefix(line, "BC Design"):
+		case strings.HasPrefix(line, "Type RM Length L Ch R ="):
 			return culvert, i, nil
 
-		case strings.HasPrefix(line, "Type RM Length L Ch R ="):
-			return culvert, i, errors.New("Failed to terminate parsing of culvert at 'BC Design'")
-
 		case strings.HasPrefix(line, "River Reach="):
-			return culvert, i, errors.New("Failed to terminate parsing of culvert at 'BC Design'")
+			return culvert, i, nil
 		}
 	}
 	return culvert, i, nil
@@ -396,14 +392,11 @@ func getBridgeData(hsSc *bufio.Scanner, i int, lineData []string) (bridges, int,
 		case strings.HasPrefix(line, "Pier Skew"):
 			bridge.NumPiers++
 
-		case strings.HasPrefix(line, "BC Design"):
+		case strings.HasPrefix(line, "Type RM Length L Ch R ="):
 			return bridge, i, nil
 
-		case strings.HasPrefix(line, "Type RM Length L Ch R ="):
-			return bridge, i, errors.New("Failed to terminate parsing of bridge at 'BC Design'")
-
 		case strings.HasPrefix(line, "River Reach="):
-			return bridge, i, errors.New("Failed to terminate parsing of bridge at 'BC Design'")
+			return bridge, i, nil
 		}
 	}
 	return bridge, i, nil
