@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -198,14 +197,14 @@ func (rm *RasModel) Index() Model {
 // IsGeospatial ...
 func (rm *RasModel) IsGeospatial() bool {
 	if rm.Metadata.Projection == "" {
-		fmt.Println("no valid coordinate reference system")
+		fmt.Println(rm.Metadata.ProjFilePath, "| no valid coordinate reference system")
 		return false
 	}
 	modelVersions := strings.Split(rm.Version, ",")
 	for _, version := range modelVersions {
 		if strings.Contains(version, ".g") {
 			geomVersion := strings.TrimSpace(strings.Split(version, ":")[1])
-			v, err := strconv.ParseFloat(geomVersion, 64)
+			v, err := parseFloat(geomVersion, 64)
 			if err != nil {
 				fmt.Println("could not convert the geometry version to a float")
 				return false
@@ -284,7 +283,7 @@ func getProjection(rm *RasModel, fn string, wg *sync.WaitGroup) {
 
 	sourceSpRef := gdal.CreateSpatialReference(line)
 	if err := sourceSpRef.Validate(); err != nil {
-		fmt.Println(fmt.Sprintf("%s is not a valid projection file.\n", fn))
+		fmt.Println(fmt.Sprintf("%s is not a valid projection file.", fn))
 		return
 	}
 	if rm.Metadata.Projection != "" {

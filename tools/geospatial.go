@@ -70,11 +70,11 @@ out:
 		line := sc.Text()
 		for s := 0; s < colWidth; {
 			if len(line) > s {
-				val1, err := strconv.ParseFloat(strings.TrimSpace(line[s:s+valueWidth]), 64)
+				val1, err := parseFloat(strings.TrimSpace(line[s:s+valueWidth]), 64)
 				if err != nil {
 					return pairs, err
 				}
-				val2, err := strconv.ParseFloat(strings.TrimSpace(line[s+valueWidth:s+stride]), 64)
+				val2, err := parseFloat(strings.TrimSpace(line[s+valueWidth:s+stride]), 64)
 				if err != nil {
 					return pairs, err
 				}
@@ -358,7 +358,7 @@ func getBanks(line string, transform gdal.CoordinateTransform, xsLayer VectorLay
 		layer := VectorLayer{FeatureName: strings.TrimSpace(s), Fields: map[string]interface{}{}}
 		layer.Fields["RiverReachName"] = xsLayer.Fields["RiverReachName"]
 		layer.Fields["xsName"] = xsLayer.FeatureName
-		bankStation, err := strconv.ParseFloat(s, 64)
+		bankStation, err := parseFloat(s, 64)
 		if err != nil {
 			return layers, err
 		}

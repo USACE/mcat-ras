@@ -70,7 +70,7 @@ func getGeomData(rm *RasModel, fn string, wg *sync.WaitGroup) {
 		case strings.HasPrefix(line, "River Reach="):
 			structures, err := getHydraulicStructureData(rm, fn, idx)
 			if err != nil {
-				fmt.Println(meta.FileExt, err)
+				fmt.Println("Hydraulic Structures|", meta.FileExt, err)
 				continue
 			}
 			meta.Structures = append(meta.Structures, structures)

@@ -3,6 +3,7 @@ package tools
 import (
 	"bufio"
 	"errors"
+	"strconv"
 	"strings"
 )
 
@@ -67,4 +68,11 @@ func stringInSlice(val string, s []string) bool {
 		}
 	}
 	return false
+}
+
+func parseFloat(s string, bitSize int) (float64, error) {
+	if s == "" {
+		return 0, nil
+	}
+	return strconv.ParseFloat(s, bitSize)
 }
