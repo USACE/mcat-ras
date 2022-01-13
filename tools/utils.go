@@ -59,3 +59,12 @@ func getDescription(sc *bufio.Scanner, idx int, endLine string) (string, int, er
 	}
 	return description, idx, nil
 }
+
+func stringInSlice(val string, s []string) bool {
+	for i := range s {
+		if s[i] == val {
+			return true
+		}
+	}
+	return false
+}
