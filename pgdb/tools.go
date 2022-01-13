@@ -122,7 +122,7 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 	}
 
 	modelID, err := getModelID(tx, definitionFile)
-	fmt.Println("Model ID:", modelID)
+	fmt.Println("Model ID:", modelID, "Name|", definitionFile)
 	if err != nil {
 		fmt.Println(err)
 		return err

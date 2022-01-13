@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"log"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -199,7 +198,7 @@ func (rm *RasModel) Index() Model {
 // IsGeospatial ...
 func (rm *RasModel) IsGeospatial() bool {
 	if rm.Metadata.Projection == "" {
-		log.Println("no valid coordinate reference system")
+		fmt.Println("no valid coordinate reference system")
 		return false
 	}
 	modelVersions := strings.Split(rm.Version, ",")
@@ -208,11 +207,11 @@ func (rm *RasModel) IsGeospatial() bool {
 			geomVersion := strings.TrimSpace(strings.Split(version, ":")[1])
 			v, err := strconv.ParseFloat(geomVersion, 64)
 			if err != nil {
-				log.Println("could not convert the geometry version to a float")
+				fmt.Println("could not convert the geometry version to a float")
 				return false
 			}
 			if v < 4 {
-				log.Printf("geometry file version: %f is not geospatial", v)
+				fmt.Printf("geometry file version: %f is not geospatial", v)
 				return false
 			}
 		}
