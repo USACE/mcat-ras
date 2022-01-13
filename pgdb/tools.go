@@ -152,7 +152,7 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 				geometryFile.GeomTitle,
 				version,
 				geometryFile.Description); err != nil {
-				fmt.Println("Geometry File|", err)
+				fmt.Println("Geometry File", geometryFile.FileExt, "|", err)
 				tx.Rollback()
 				return err
 			}
@@ -183,7 +183,7 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 				cutLineProfileMatch := xs.Fields["CutLineProfileMatch"]
 				xsStation, err := strconv.ParseFloat(xs.FeatureName, 64)
 				if err != nil {
-					fmt.Println("XS|", err)
+					fmt.Println("XS", geometryFile.FileExt, "|", err)
 					tx.Rollback()
 					return err
 				}
@@ -209,7 +209,7 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 
 				_, err = tx.Exec(upsertBanksSQL, xsID, bankStation, banks.Geometry)
 				if err != nil {
-					fmt.Println("Banks|", err)
+					fmt.Println("Banks", geometryFile.FileExt, "|", err)
 					tx.Rollback()
 					return err
 				}
@@ -219,17 +219,17 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 			for _, storageArea := range features.StorageAreas {
 				_, err = tx.Exec(upsertStorageAreasSQL, geometryFileID, storageArea.FeatureName, storageArea.Geometry)
 				if err != nil {
-					fmt.Println("Storage Areas|", err)
+					fmt.Println("Storage Areas", geometryFile.FileExt, "|", err)
 					tx.Rollback()
 					return err
 				}
 			}
-
-			err = tx.Commit()
-			if err != nil {
-				fmt.Println("Transaction Commit Error|", err)
-				return err
-			}
+		}
+		
+		err = tx.Commit()
+		if err != nil {
+			fmt.Println("Transaction Commit Error|", err)
+			return err
 		}
 
 	}
