@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"path/filepath"
 	"regexp"
@@ -28,6 +29,9 @@ type Features struct {
 	StorageAreas        []VectorLayer
 	TwoDAreas           []VectorLayer
 	HydraulicStructures []VectorLayer
+	Connections         []VectorLayer
+	BCLines             []VectorLayer
+	BreakLines          []VectorLayer	
 }
 
 // VectorLayer ...
@@ -406,6 +410,107 @@ func getStorageArea(sc *bufio.Scanner, transform gdal.CoordinateTransform) (Vect
 	return layer, err
 }
 
+// Extract name and geometry from BreakLine text block and return as Vector Layer
+func getBreakLine(sc *bufio.Scanner, transform gdal.CoordinateTransform) (VectorLayer, error) {
+	blName := rightofEquals(sc.Text())
+	layer := VectorLayer{FeatureName: blName}
+
+	xyPairs, err := getDataPairsfromTextBlock("BreakLine Polyline=", sc, 64, 16)
+	if err != nil {
+		return layer, err
+	}
+
+	// If less than 2 xyPairs, it is not a valid line.
+	if len(xyPairs) < 2 {
+		return layer, errors.New("Invalid Line Geometry")
+	}
+
+	xyLineString := gdal.Create(gdal.GT_LineString)
+	for _, pair := range xyPairs {
+		xyLineString.AddPoint2D(pair[0], pair[1])
+	}
+
+	xyLineString.Transform(transform)
+	// This is a temporary fix since the x and y values need to be flipped:
+	yxLineString := flipXYLineString(xyLineString)
+
+	multiLineString := yxLineString.ForceToMultiLineString()
+
+	wkb, err := multiLineString.ToWKB()
+	if err != nil {
+		return layer, err
+	}
+	layer.Geometry = wkb
+	return layer, err
+}
+
+// Extract name and geometry from Boundary Condition text block and return as Vector Layer
+func getBCLine(sc *bufio.Scanner, transform gdal.CoordinateTransform) (VectorLayer, error) {
+	bcName := rightofEquals(sc.Text())
+	layer := VectorLayer{FeatureName: bcName}
+
+	xyPairs, err := getDataPairsfromTextBlock("BC Line Arc=", sc, 64, 16)
+	if err != nil {
+		return layer, err
+	}
+
+	// If less than 2 xyPairs, it is not a valid line.
+	if len(xyPairs) < 2 {
+		return layer, errors.New("Invalid Line Geometry")
+	}
+
+	xyLineString := gdal.Create(gdal.GT_LineString)
+	for _, pair := range xyPairs {
+		xyLineString.AddPoint2D(pair[0], pair[1])
+	}
+
+	xyLineString.Transform(transform)
+	// This is a temporary fix since the x and y values need to be flipped:
+	yxLineString := flipXYLineString(xyLineString)
+
+	multiLineString := yxLineString.ForceToMultiLineString()
+
+	wkb, err := multiLineString.ToWKB()
+	if err != nil {
+		return layer, err
+	}
+	layer.Geometry = wkb
+	return layer, err
+}
+
+// Extract name and geometry from Connection text block and return as Vector Layer
+func getConnectionLine(sc *bufio.Scanner, transform gdal.CoordinateTransform) (VectorLayer, error) {
+	layer := VectorLayer{FeatureName: strings.TrimSpace(strings.Split(rightofEquals(sc.Text()), ",")[0])}
+
+	xyPairs, err := getDataPairsfromTextBlock("Connection Line=", sc, 64, 16)
+	if err != nil {
+		return layer, err
+	}
+
+	// If less than 2 xyPairs, it is not a valid line.
+	if len(xyPairs) < 2 {
+		return layer, errors.New("Invalid Line Geometry")
+	}
+
+	xyLineString := gdal.Create(gdal.GT_LineString)
+	for _, pair := range xyPairs {
+		xyLineString.AddPoint2D(pair[0], pair[1])
+	}
+
+	xyLineString.Transform(transform)
+	// This is a temporary fix since the x and y values need to be flipped:
+	yxLineString := flipXYLineString(xyLineString)
+
+	multiLineString := yxLineString.ForceToMultiLineString()
+
+	wkb, err := multiLineString.ToWKB()
+	if err != nil {
+		return layer, err
+	}
+	layer.Geometry = wkb
+	return layer, err
+}
+
 // GetGeospatialData ...
 func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string, sourceCRS string, destinationCRS int) error {
 	geomFileName := filepath.Base(geomFilePath)
@@ -451,6 +556,48 @@ func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string,
 			}
 			f.XS = append(f.XS, xsLayer)
 			f.Banks = append(f.Banks, bankLayers...)
+
+		case strings.HasPrefix(line, "BreakLine Name="):
+			blLayer, err := getBreakLine(sc, transform)
+			switch {
+			case err != nil:
+				switch {
+				case err.Error() == "Invalid Line Geometry":
+					log.Println("Skipped", blLayer.FeatureName, err.Error())
+				default:
+					return err
+				}
+			default:
+				f.BreakLines = append(f.BreakLines, blLayer)
+			}
+
+		case strings.HasPrefix(line, "BC Line Name="):
+			bcLayer, err := getBCLine(sc, transform)
+			switch {
+			case err != nil:
+				switch {
+				case err.Error() == "Invalid Line Geometry":
+					log.Println("Skipped", bcLayer.FeatureName, err.Error())
+				default:
+					return err
+				}
+			default:
+				f.BCLines = append(f.BCLines, bcLayer)
+			}
+
+		case strings.HasPrefix(line, "Connection="):
+			connLayer, err := getConnectionLine(sc, transform)
+			switch {
+			case err != nil:
+				switch {
+				case err.Error() == "Invalid Line Geometry":
+					log.Println("Skipped", connLayer.FeatureName, err.Error())
+				default:
+					return err
+				}
+			default:
+				f.Connections = append(f.Connections, connLayer)
+			}
 
 		}
 	}

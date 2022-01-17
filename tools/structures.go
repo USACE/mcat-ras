@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// Map of HEC RAS Shape index to Culvert Cross Sections
 var conduitShapes map[int]string = map[int]string{
 	1: "Circular",
 	2: "Box",
@@ -18,6 +19,7 @@ var conduitShapes map[int]string = map[int]string{
 	8: "High Arch",
 	9: "Conspan Arch"}
 
+// Store HEC-RAS 1D Hydraulic Structures
 type hydraulicStructures struct {
 	River       string      `json:"River Name"`
 	Reach       string      `json:"Reach Name"`
@@ -27,11 +29,27 @@ type hydraulicStructures struct {
 	WeirData    weirData    `json:"Inline Weir Data"`
 }
 
+// Store HEC-RAS 2D Connections
+type connections2d struct {
+	Name        string      `json:"Connection Name"`
+	Description string      `json:"Connection Description"`
+	UpSA        string      `json:"Connection Up SA"`
+	DnSA        string      `json:"Connection Dn SA"`
+	WeirWidth   float64     `json:"Weir Width"`
+	WeirElev    maxMinPairs `json:"Weir Elevations"`
+	NumGates    int         `json:"Num Gates"`
+	Gates       []gates
+	NumConduits int        `json:"Num Culvert Conduits"`
+	Conduits    []conduits `json:"Culvert Conduits"`
+}
+
 type culvertData struct {
 	NumCulverts int        `json:"Num Culverts"`
 	Culverts    []culverts `json:"Culverts"`
 }
 
+// Store HEC-RAS 1D Culverts. This is different than culverts
+// associated with inline structures or 2D connections
 type culverts struct {
 	Name          string
 	Station       float64
@@ -45,11 +63,13 @@ type culverts struct {
 	Conduits      []conduits  `json:"Culvert Conduits"`
 }
 
+// Store Min and Maximum Elevation from HEC-RAS Deck/Weir Station Elevation Block
 type maxMinPairs struct {
 	Max float64
 	Min float64
 }
 
+// Store Culvert Groups in HEC-RAS 1D Culverts, 1D Inline Structures, and 2D Connections
 type conduits struct {
 	Name       string
 	NumBarrels int `json:"Num Barrels"`
@@ -65,6 +85,7 @@ type bridgeData struct {
 	Bridges    []bridges `json:"Bridges"`
 }
 
+// Store HEC-RAS 1D Bridges
 type bridges struct {
 	Name          string
 	Station       float64
@@ -82,6 +103,7 @@ type weirData struct {
 	Weirs    []weirs `json:"Inline Weirs"`
 }
 
+// Store HEC-RAS 1D Inline Structures
 type weirs struct {
 	Name        string
 	Station     float64
@@ -94,6 +116,7 @@ type weirs struct {
 	Conduits    []conduits `json:"Culvert Conduits"`
 }
 
+// Store Gates Groups in HEC-RAS 1D Inline Structures and 2D Connections
 type gates struct {
 	Name        string
 	Width       float64
@@ -101,6 +124,7 @@ type gates struct {
 	NumOpenings int `json:"Num Openings"`
 }
 
+// Return elevation data from HEC-RAS Station-Elevation (SE) block of text
 func datafromTextBlock(hsSc *bufio.Scanner, i int, nLines int, nSkipLines int, colWidth int, valueWidth int, interval int) ([]float64, int, error) {
 	values := []float64{}
 	nSkipped := 0
@@ -144,6 +168,8 @@ out:
 	return values, i, nil
 }
 
+// Return maximum and minimum elevation givin an scanner object
+// with curser at definition line of SE block
 func getMaxMinElev(hsSc *bufio.Scanner, i int, nLines int, nSkipLines int, colWidth int, valueWidth int, interval int) (maxMinPairs, int, error) {
 	pair := maxMinPairs{}
 
@@ -213,6 +239,8 @@ func stringtoFloat(s string) (float64, error) {
 	return 0, nil
 }
 
+// Extract data from Culvert Groups in HEC-RAS 1D Culverts,
+// 1D Inline Structures, and 2D Connections
 func getConduits(line string, single bool) (conduits, error) {
 	lineData := strings.Split(rightofEquals(line), ",")
 	conduit := conduits{}
@@ -263,6 +291,7 @@ func getConduits(line string, single bool) (conduits, error) {
 	return conduit, nil
 }
 
+// Extract data from HEC-RAS 1D Culverts
 func getCulvertData(hsSc *bufio.Scanner, i int, lineData []string) (culverts, int, error) {
 	culvert := culverts{}
 
@@ -339,6 +368,7 @@ func getCulvertData(hsSc *bufio.Scanner, i int, lineData []string) (culverts, in
 	return culvert, i, nil
 }
 
+// Extract data from 1D Bridges
 func getBridgeData(hsSc *bufio.Scanner, i int, lineData []string) (bridges, int, error) {
 	bridge := bridges{}
 
@@ -402,6 +432,7 @@ func getBridgeData(hsSc *bufio.Scanner, i int, lineData []string) (bridges, int,
 	return bridge, i, nil
 }
 
+// Extract data from Gates Groups in 1D Inline Structures and 2D Connections
 func getGates(nextLine string) (gates, error) {
 	gate := gates{}
 
@@ -430,6 +461,7 @@ func getGates(nextLine string) (gates, error) {
 	return gate, nil
 }
 
+// Extract data from Inline Structures
 func getWeirData(rm *RasModel, fn string, i int) (weirs, error) {
 	weir := weirs{}
 
@@ -514,6 +546,7 @@ func getWeirData(rm *RasModel, fn string, i int) (weirs, error) {
 	return weir, nil
 }
 
+// Extract all data from 1D Bridges, Culverts, and Inline Structures
 func getHydraulicStructureData(rm *RasModel, fn string, idx int) (hydraulicStructures, error) {
 	structures := hydraulicStructures{}
 	bData := bridgeData{}
@@ -588,3 +621,86 @@ func getHydraulicStructureData(rm *RasModel, fn string, idx int) (hydraulicStruc
 
 	return structures, nil
 }
+
+
+// Extract data from 2D Connections
+func getConnectionsData(rm *RasModel, fn string, i int) (connections2d, error) {
+	connection := connections2d{}
+
+	f, err := rm.FileStore.GetObject(fn)
+	if err != nil {
+		return connection, err
+	}
+	defer f.Close()
+
+	cSc := bufio.NewScanner(f)
+
+	ci := 0
+	for cSc.Scan() {
+		ci++
+		if ci == i {
+			lineData := strings.Split(rightofEquals(cSc.Text()), ",")
+			name := strings.TrimSpace(lineData[0])
+
+			connection.Name = name
+		} else if ci > i {
+			line := cSc.Text()
+			switch {
+			case strings.HasPrefix(line, "Connection Desc="):
+				description, _, err := getDescriptionConnections(cSc, 0, "Connection Line=")
+				if err != nil {
+					return connection, err
+				}
+				connection.Description += description
+
+			case strings.HasPrefix(line, "Connection Up SA="):
+				connection.UpSA = rightofEquals(line)
+
+			case strings.HasPrefix(line, "Connection Dn SA="):
+				connection.DnSA = rightofEquals(line)
+
+			case strings.HasPrefix(line, "Conn Weir WD="):
+				weirWidth, err := strconv.ParseFloat(strings.TrimSpace(rightofEquals(line)), 64)
+				if err != nil {
+					return connection, err
+				}
+				connection.WeirWidth = weirWidth
+
+			case strings.HasPrefix(line, "Conn Weir SE="):
+				nElev, err := strconv.Atoi(strings.TrimSpace(rightofEquals(line)))
+				if err != nil {
+					return connection, err
+				}
+				nLines := numberofLines(nElev*2, 80, 8)
+
+				elev, _, err := getMaxMinElev(cSc, 0, nLines, 0, 80, 8, 2)
+				if err != nil {
+					return connection, err
+				}
+				connection.WeirElev = elev
+
+			case strings.HasPrefix(line, "Conn Gate Name Wd,H,"):
+				cSc.Scan()
+				gate, err := getGates(cSc.Text())
+				if err != nil {
+					return connection, err
+				}
+				connection.Gates = append(connection.Gates, gate)
+				connection.NumGates++
+
+			case strings.HasPrefix(line, "Connection Culv="):
+				conduit, err := getConduits(line, false)
+				if err != nil {
+					return connection, err
+				}
+				connection.Conduits = append(connection.Conduits, conduit)
+				connection.NumConduits++
+
+			case strings.HasPrefix(line, "Conn Outlet Rating Curve="):
+				return connection, nil
+
+			}
+		}
+	}
+	return connection, nil
+}								
