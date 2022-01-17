@@ -2,7 +2,6 @@ package tools
 
 import (
 	"bufio"
-	"errors"
 	"math"
 	"strconv"
 	"strings"
@@ -122,7 +121,7 @@ out:
 				if sVal != "" {
 					nvalues++
 					if nvalues%interval == 0 {
-						val, err := strconv.ParseFloat(sVal, 64)
+						val, err := parseFloat(sVal, 64)
 						if err != nil {
 							return values, i, err
 						}
@@ -205,7 +204,7 @@ func getHighLowChord(hsSc *bufio.Scanner, i int, nElevText string, colWidth int,
 func stringtoFloat(s string) (float64, error) {
 	trimmed := strings.TrimSpace(s)
 	if trimmed != "" {
-		val, err := strconv.ParseFloat(trimmed, 64)
+		val, err := parseFloat(trimmed, 64)
 		if err != nil {
 			return 0, err
 		}
@@ -267,7 +266,7 @@ func getConduits(line string, single bool) (conduits, error) {
 func getCulvertData(hsSc *bufio.Scanner, i int, lineData []string) (culverts, int, error) {
 	culvert := culverts{}
 
-	station, err := strconv.ParseFloat(strings.TrimSpace(lineData[1]), 64)
+	station, err := parseFloat(strings.TrimSpace(lineData[1]), 64)
 	if err != nil {
 		return culvert, i, err
 	}
@@ -292,7 +291,7 @@ func getCulvertData(hsSc *bufio.Scanner, i int, lineData []string) (culverts, in
 			i++
 			hsSc.Scan()
 			nextLineData := strings.Split(hsSc.Text(), ",")
-			deckWidth, err := strconv.ParseFloat(strings.TrimSpace(nextLineData[0]), 64)
+			deckWidth, err := parseFloat(strings.TrimSpace(nextLineData[0]), 64)
 			if err != nil {
 				return culvert, i, err
 			}
@@ -330,14 +329,11 @@ func getCulvertData(hsSc *bufio.Scanner, i int, lineData []string) (culverts, in
 			culvert.Conduits = append(culvert.Conduits, conduit)
 			culvert.NumConduits++
 
-		case strings.HasPrefix(line, "BC Design"):
+		case strings.HasPrefix(line, "Type RM Length L Ch R ="):
 			return culvert, i, nil
 
-		case strings.HasPrefix(line, "Type RM Length L Ch R ="):
-			return culvert, i, errors.New("Failed to terminate parsing of culvert at 'BC Design'")
-
 		case strings.HasPrefix(line, "River Reach="):
-			return culvert, i, errors.New("Failed to terminate parsing of culvert at 'BC Design'")
+			return culvert, i, nil
 		}
 	}
 	return culvert, i, nil
@@ -346,7 +342,7 @@ func getCulvertData(hsSc *bufio.Scanner, i int, lineData []string) (culverts, in
 func getBridgeData(hsSc *bufio.Scanner, i int, lineData []string) (bridges, int, error) {
 	bridge := bridges{}
 
-	station, err := strconv.ParseFloat(strings.TrimSpace(lineData[1]), 64)
+	station, err := parseFloat(strings.TrimSpace(lineData[1]), 64)
 	if err != nil {
 		return bridge, i, err
 	}
@@ -371,7 +367,7 @@ func getBridgeData(hsSc *bufio.Scanner, i int, lineData []string) (bridges, int,
 			i++
 			hsSc.Scan()
 			nextLineData := strings.Split(hsSc.Text(), ",")
-			deckWidth, err := strconv.ParseFloat(strings.TrimSpace(nextLineData[0]), 64)
+			deckWidth, err := parseFloat(strings.TrimSpace(nextLineData[0]), 64)
 			if err != nil {
 				return bridge, i, err
 			}
@@ -396,14 +392,11 @@ func getBridgeData(hsSc *bufio.Scanner, i int, lineData []string) (bridges, int,
 		case strings.HasPrefix(line, "Pier Skew"):
 			bridge.NumPiers++
 
-		case strings.HasPrefix(line, "BC Design"):
+		case strings.HasPrefix(line, "Type RM Length L Ch R ="):
 			return bridge, i, nil
 
-		case strings.HasPrefix(line, "Type RM Length L Ch R ="):
-			return bridge, i, errors.New("Failed to terminate parsing of bridge at 'BC Design'")
-
 		case strings.HasPrefix(line, "River Reach="):
-			return bridge, i, errors.New("Failed to terminate parsing of bridge at 'BC Design'")
+			return bridge, i, nil
 		}
 	}
 	return bridge, i, nil
@@ -453,7 +446,7 @@ func getWeirData(rm *RasModel, fn string, i int) (weirs, error) {
 		wi++
 		if wi == i {
 			lineData := strings.Split(rightofEquals(wSc.Text()), ",")
-			station, err := strconv.ParseFloat(strings.TrimSpace(lineData[1]), 64)
+			station, err := parseFloat(strings.TrimSpace(lineData[1]), 64)
 			if err != nil {
 				return weir, err
 			}
@@ -487,7 +480,7 @@ func getWeirData(rm *RasModel, fn string, i int) (weirs, error) {
 			case strings.HasPrefix(line, "IW Dist,WD"):
 				wSc.Scan()
 				nextLineData := strings.Split(wSc.Text(), ",")
-				weirWidth, err := strconv.ParseFloat(strings.TrimSpace(nextLineData[1]), 64)
+				weirWidth, err := parseFloat(strings.TrimSpace(nextLineData[1]), 64)
 				if err != nil {
 					return weir, err
 				}

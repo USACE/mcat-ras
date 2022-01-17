@@ -43,18 +43,19 @@ type xyzPoint struct {
 	z float64
 }
 
-var unitConsistencyMap map[string]string = map[string]string{
-	"English Units": "US survey foot",
-	"SI Units":      "metre"}
+
+var unitConsistencyGroups [][]string = [][]string{{"english units", "us survey foot", "foot_us", "foot us", "us foot"}, {"si units","metre", "meter"}}
 
 // checkUnitConsistency checks that the unit system used by the model and its coordinate reference system are the same
 func checkUnitConsistency(modelUnits string, sourceCRS string) error {
 	sourceSpRef := gdal.CreateSpatialReference(sourceCRS)
 
 	if crsUnits, ok := sourceSpRef.AttrValue("UNIT", 0); ok {
-		if unitConsistencyMap[modelUnits] == crsUnits {
-			return nil
+		for _, unitsSet := range unitConsistencyGroups {
+			if stringInSlice(strings.ToLower(modelUnits), unitsSet) && stringInSlice(strings.ToLower(crsUnits), unitsSet) {
+				return nil
 		}
+	}
 		return errors.New("The unit system of the model and coordinate reference system are inconsistent")
 	}
 	return errors.New("Unable to check unit consistency, could not identify the coordinate reference system's units")
@@ -68,11 +69,11 @@ out:
 		line := sc.Text()
 		for s := 0; s < colWidth; {
 			if len(line) > s {
-				val1, err := strconv.ParseFloat(strings.TrimSpace(line[s:s+valueWidth]), 64)
+				val1, err := parseFloat(strings.TrimSpace(line[s:s+valueWidth]), 64)
 				if err != nil {
 					return pairs, err
 				}
-				val2, err := strconv.ParseFloat(strings.TrimSpace(line[s+valueWidth:s+stride]), 64)
+				val2, err := parseFloat(strings.TrimSpace(line[s+valueWidth:s+stride]), 64)
 				if err != nil {
 					return pairs, err
 				}
@@ -356,7 +357,7 @@ func getBanks(line string, transform gdal.CoordinateTransform, xsLayer VectorLay
 		layer := VectorLayer{FeatureName: strings.TrimSpace(s), Fields: map[string]interface{}{}}
 		layer.Fields["RiverReachName"] = xsLayer.Fields["RiverReachName"]
 		layer.Fields["xsName"] = xsLayer.FeatureName
-		bankStation, err := strconv.ParseFloat(s, 64)
+		bankStation, err := parseFloat(s, 64)
 		if err != nil {
 			return layers, err
 		}

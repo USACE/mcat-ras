@@ -3,6 +3,7 @@ package tools
 import (
 	"bufio"
 	"errors"
+	"strconv"
 	"strings"
 )
 
@@ -58,4 +59,20 @@ func getDescription(sc *bufio.Scanner, idx int, endLine string) (string, int, er
 		}
 	}
 	return description, idx, nil
+}
+
+func stringInSlice(val string, s []string) bool {
+	for i := range s {
+		if s[i] == val {
+			return true
+		}
+	}
+	return false
+}
+
+func parseFloat(s string, bitSize int) (float64, error) {
+	if s == "" {
+		return 0, nil
+	}
+	return strconv.ParseFloat(s, bitSize)
 }

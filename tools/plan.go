@@ -3,6 +3,7 @@ package tools
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -37,7 +38,7 @@ func getPlanData(rm *RasModel, fn string, wg *sync.WaitGroup) {
 		meta.Notes += msg
 		rm.Metadata.PlanFiles = append(rm.Metadata.PlanFiles, meta)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		}
 	}()
 

@@ -3,6 +3,7 @@ package tools
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -34,7 +35,7 @@ func getFlowData(rm *RasModel, fn string, wg *sync.WaitGroup) {
 		meta.Notes += msg
 		rm.Metadata.FlowFiles = append(rm.Metadata.FlowFiles, meta)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		}
 	}()
 
