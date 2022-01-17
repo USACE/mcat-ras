@@ -48,14 +48,14 @@ type xyzPoint struct {
 }
 
 
-var unitConsistencyMap [][]string = [][]string{{"english units", "us survey foot", "foot_us", "foot us", "us foot"}, {"si units","metre", "meter"}}
+var unitConsistencyGroups [][]string = [][]string{{"english units", "us survey foot", "foot_us", "foot us", "us foot"}, {"si units","metre", "meter"}}
 
 // checkUnitConsistency checks that the unit system used by the model and its coordinate reference system are the same
 func checkUnitConsistency(modelUnits string, sourceCRS string) error {
 	sourceSpRef := gdal.CreateSpatialReference(sourceCRS)
 
 	if crsUnits, ok := sourceSpRef.AttrValue("UNIT", 0); ok {
-		for _, unitsSet := range unitConsistencyMap {
+		for _, unitsSet := range unitConsistencyGroups {
 			if stringInSlice(strings.ToLower(modelUnits), unitsSet) && stringInSlice(strings.ToLower(crsUnits), unitsSet) {
 				return nil
 		}
