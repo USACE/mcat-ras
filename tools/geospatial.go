@@ -262,7 +262,7 @@ func getRiverCenterline(sc *bufio.Scanner, transform gdal.CoordinateTransform) (
 		return layer, errors.Wrap(err, 0)
 	}
 	layer.Geometry = wkb
-	return layer, errors.Wrap(err, 0)
+	return layer, nil
 }
 
 func getXSBanks(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReachName string) (VectorLayer, []VectorLayer, error) {
@@ -286,7 +286,7 @@ func getXSBanks(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReac
 		}
 	}
 
-	return xsLayer, bankLayers, errors.Wrap(err, 0)
+	return xsLayer, bankLayers, nil
 }
 
 func getXS(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReachName string) (VectorLayer, [][2]float64, float64, error) {
@@ -346,7 +346,7 @@ func getXS(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReachName
 		return layer, xyPairs, mzPairs[0][0], errors.Wrap(err, 0)
 	}
 	layer.Geometry = wkb
-	return layer, xyPairs, mzPairs[0][0], errors.Wrap(err, 0)
+	return layer, xyPairs, mzPairs[0][0], nil
 }
 
 func getBanks(line string, transform gdal.CoordinateTransform, xsLayer VectorLayer, xyPairs [][2]float64, startingStation float64) ([]VectorLayer, error) {
@@ -403,7 +403,7 @@ func getStorageArea(sc *bufio.Scanner, transform gdal.CoordinateTransform) (Vect
 		return layer, errors.Wrap(err, 0)
 	}
 	layer.Geometry = wkb
-	return layer, errors.Wrap(err, 0)
+	return layer, nil
 }
 
 // GetGeospatialData ...

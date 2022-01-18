@@ -45,7 +45,10 @@ func readFirstLine(fs filestore.FileStore, fn string) (string, error) {
 
 	reader := bufio.NewReader(file)
 	line, err := reader.ReadString('\n')
-	return rmNewLineChar(line), errors.Wrap(err, 0)
+	if err != nil {
+		return "", errors.Wrap(err, 0)
+	}
+	return rmNewLineChar(line), nil
 }
 
 func rmNewLineChar(s string) string {
