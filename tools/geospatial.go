@@ -71,11 +71,11 @@ out:
 			if len(line) > s {
 				val1, err := parseFloat(strings.TrimSpace(line[s:s+valueWidth]), 64)
 				if err != nil {
-					return pairs, errors.Wrap(err, 1)
+					return pairs, errors.Wrap(err, 0)
 				}
 				val2, err := parseFloat(strings.TrimSpace(line[s+valueWidth:s+stride]), 64)
 				if err != nil {
-					return pairs, errors.Wrap(err, 1)
+					return pairs, errors.Wrap(err, 0)
 				}
 				pairs = append(pairs, [2]float64{val1, val2})
 				if len(pairs) == nPairs {
@@ -97,11 +97,11 @@ func getDataPairsfromTextBlock(nDataPairsLine string, sc *bufio.Scanner, colWidt
 		if strings.HasPrefix(line, nDataPairsLine) {
 			nPairs, err := strconv.Atoi(rightofEquals(line))
 			if err != nil {
-				return pairs, errors.Wrap(err, 1)
+				return pairs, errors.Wrap(err, 0)
 			}
 			pairs, err = dataPairsfromTextBlock(sc, nPairs, colWidth, valueWidth)
 			if err != nil {
-				return pairs, errors.Wrap(err, 1)
+				return pairs, errors.Wrap(err, 0)
 			}
 			break
 		}
@@ -178,7 +178,7 @@ func getTransform(sourceCRS string, destinationCRS int) (gdal.CoordinateTransfor
 
 	destinationSpRef := gdal.CreateSpatialReference("")
 	if err := destinationSpRef.FromEPSG(destinationCRS); err != nil {
-		return transform, errors.Wrap(err, 1)
+		return transform, errors.Wrap(err, 0)
 	}
 	transform = gdal.CreateCoordinateTransform(sourceSpRef, destinationSpRef)
 	return transform, nil
@@ -231,7 +231,7 @@ func flipXYPoint(xyPoint gdal.Geometry) gdal.Geometry {
 func toNumeric(s string) (string, error) {
 	reg, err := regexp.Compile("[^.0-9]+")
 	if err != nil {
-		return s, errors.Wrap(err, 1)
+		return s, errors.Wrap(err, 0)
 	}
 	num := reg.ReplaceAllString(s, "")
 	return num, nil
@@ -243,7 +243,7 @@ func getRiverCenterline(sc *bufio.Scanner, transform gdal.CoordinateTransform) (
 
 	xyPairs, err := getDataPairsfromTextBlock("Reach XY=", sc, 64, 16)
 	if err != nil {
-		return layer, errors.Wrap(err, 1)
+		return layer, errors.Wrap(err, 0)
 	}
 
 	xyLineString := gdal.Create(gdal.GT_LineString)
@@ -259,10 +259,10 @@ func getRiverCenterline(sc *bufio.Scanner, transform gdal.CoordinateTransform) (
 
 	wkb, err := multiLineString.ToWKB()
 	if err != nil {
-		return layer, errors.Wrap(err, 1)
+		return layer, errors.Wrap(err, 0)
 	}
 	layer.Geometry = wkb
-	return layer, errors.Wrap(err, 1)
+	return layer, errors.Wrap(err, 0)
 }
 
 func getXSBanks(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReachName string) (VectorLayer, []VectorLayer, error) {
@@ -270,7 +270,7 @@ func getXSBanks(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReac
 
 	xsLayer, xyPairs, startingStation, err := getXS(sc, transform, riverReachName)
 	if err != nil {
-		return xsLayer, bankLayers, errors.Wrap(err, 1)
+		return xsLayer, bankLayers, errors.Wrap(err, 0)
 	}
 
 	if xsLayer.Fields["CutLineProfileMatch"].(bool) {
@@ -279,14 +279,14 @@ func getXSBanks(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReac
 			if strings.HasPrefix(line, "Bank Sta=") {
 				bankLayers, err = getBanks(line, transform, xsLayer, xyPairs, startingStation)
 				if err != nil {
-					return xsLayer, bankLayers, errors.Wrap(err, 1)
+					return xsLayer, bankLayers, errors.Wrap(err, 0)
 				}
 				break
 			}
 		}
 	}
 
-	return xsLayer, bankLayers, errors.Wrap(err, 1)
+	return xsLayer, bankLayers, errors.Wrap(err, 0)
 }
 
 func getXS(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReachName string) (VectorLayer, [][2]float64, float64, error) {
@@ -299,18 +299,18 @@ func getXS(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReachName
 
 	xsName, err := toNumeric(compData[1])
 	if err != nil {
-		return layer, xyPairs, 0.0, errors.Wrap(err, 1)
+		return layer, xyPairs, 0.0, errors.Wrap(err, 0)
 	}
 	layer.FeatureName = xsName
 
 	xyPairs, err = getDataPairsfromTextBlock("XS GIS Cut Line", sc, 64, 16)
 	if err != nil {
-		return layer, xyPairs, 0.0, errors.Wrap(err, 1)
+		return layer, xyPairs, 0.0, errors.Wrap(err, 0)
 	}
 
 	if len(xyPairs) < 2 {
 		err = errors.New("the cross-section cutline could not be extracted, check that the geometry file contains cutlines")
-		return layer, xyPairs, 0.0, errors.Wrap(err, 1)
+		return layer, xyPairs, 0.0, errors.Wrap(err, 0)
 	}
 
 	xyzLineString := gdal.Create(gdal.GT_LineString25D)
@@ -321,7 +321,7 @@ func getXS(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReachName
 
 	mzPairs, err := getDataPairsfromTextBlock("#Sta/Elev", sc, 80, 8)
 	if err != nil {
-		return layer, xyPairs, mzPairs[0][0], errors.Wrap(err, 1)
+		return layer, xyPairs, mzPairs[0][0], errors.Wrap(err, 0)
 	}
 
 	if len(mzPairs) >= 2 {
@@ -343,10 +343,10 @@ func getXS(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReachName
 	multiLineString := yxzLineString.ForceToMultiLineString()
 	wkb, err := multiLineString.ToWKB()
 	if err != nil {
-		return layer, xyPairs, mzPairs[0][0], errors.Wrap(err, 1)
+		return layer, xyPairs, mzPairs[0][0], errors.Wrap(err, 0)
 	}
 	layer.Geometry = wkb
-	return layer, xyPairs, mzPairs[0][0], errors.Wrap(err, 1)
+	return layer, xyPairs, mzPairs[0][0], errors.Wrap(err, 0)
 }
 
 func getBanks(line string, transform gdal.CoordinateTransform, xsLayer VectorLayer, xyPairs [][2]float64, startingStation float64) ([]VectorLayer, error) {
@@ -359,7 +359,7 @@ func getBanks(line string, transform gdal.CoordinateTransform, xsLayer VectorLay
 		layer.Fields["xsName"] = xsLayer.FeatureName
 		bankStation, err := parseFloat(s, 64)
 		if err != nil {
-			return layers, errors.Wrap(err, 1)
+			return layers, errors.Wrap(err, 0)
 		}
 		bankXY := interpXY(xyPairs, bankStation-startingStation)
 		xyPoint := gdal.Create(gdal.GT_Point)
@@ -370,7 +370,7 @@ func getBanks(line string, transform gdal.CoordinateTransform, xsLayer VectorLay
 		multiPoint := yxPoint.ForceToMultiPoint()
 		wkb, err := multiPoint.ToWKB()
 		if err != nil {
-			return layers, errors.Wrap(err, 1)
+			return layers, errors.Wrap(err, 0)
 		}
 		layer.Geometry = wkb
 		layers = append(layers, layer)
@@ -383,7 +383,7 @@ func getStorageArea(sc *bufio.Scanner, transform gdal.CoordinateTransform) (Vect
 
 	xyPairs, err := getDataPairsfromTextBlock("Storage Area Surface Line=", sc, 32, 16)
 	if err != nil {
-		return layer, errors.Wrap(err, 1)
+		return layer, errors.Wrap(err, 0)
 	}
 
 	xyLinearRing := gdal.Create(gdal.GT_LinearRing)
@@ -400,10 +400,10 @@ func getStorageArea(sc *bufio.Scanner, transform gdal.CoordinateTransform) (Vect
 	yxMultiPolygon := yxPolygon.ForceToMultiPolygon()
 	wkb, err := yxMultiPolygon.ToWKB()
 	if err != nil {
-		return layer, errors.Wrap(err, 1)
+		return layer, errors.Wrap(err, 0)
 	}
 	layer.Geometry = wkb
-	return layer, errors.Wrap(err, 1)
+	return layer, errors.Wrap(err, 0)
 }
 
 // GetGeospatialData ...
@@ -414,7 +414,7 @@ func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string,
 
 	file, err := fs.GetObject(geomFilePath)
 	if err != nil {
-		return errors.Wrap(err, 1) 
+		return errors.Wrap(err, 0) 
 	}
 	defer file.Close()
 
@@ -422,7 +422,7 @@ func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string,
 
 	transform, err := getTransform(sourceCRS, destinationCRS)
 	if err != nil {
-		return errors.Wrap(err, 1) 
+		return errors.Wrap(err, 0) 
 	}
 
 	for sc.Scan() {
@@ -432,7 +432,7 @@ func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string,
 		case strings.HasPrefix(line, "River Reach="):
 			riverLayer, err := getRiverCenterline(sc, transform)
 			if err != nil {
-				return errors.Wrap(err, 1) 
+				return errors.Wrap(err, 0) 
 			}
 			f.Rivers = append(f.Rivers, riverLayer)
 			riverReachName = riverLayer.FeatureName
@@ -440,14 +440,14 @@ func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string,
 		case strings.HasPrefix(line, "Storage Area="):
 			storageAreaLayer, err := getStorageArea(sc, transform)
 			if err != nil {
-				return errors.Wrap(err, 1) 
+				return errors.Wrap(err, 0) 
 			}
 			f.StorageAreas = append(f.StorageAreas, storageAreaLayer)
 
 		case strings.HasPrefix(line, "Type RM Length L Ch R = 1"):
 			xsLayer, bankLayers, err := getXSBanks(sc, transform, riverReachName)
 			if err != nil {
-				return errors.Wrap(err, 1) 
+				return errors.Wrap(err, 0) 
 			}
 			f.XS = append(f.XS, xsLayer)
 			f.Banks = append(f.Banks, bankLayers...)

@@ -228,7 +228,7 @@ func (rm *RasModel) GeospatialData(destinationCRS int) (GeoData, error) {
 		sourceCRS := rm.Metadata.Projection
 
 		if err := checkUnitConsistency(modelUnits, sourceCRS); err != nil {
-			return gd, errors.Wrap(err, 1) 
+			return gd, errors.Wrap(err, 0) 
 		}
 
 		gd.Features = make(map[string]Features)
@@ -236,13 +236,13 @@ func (rm *RasModel) GeospatialData(destinationCRS int) (GeoData, error) {
 
 		for _, g := range rm.Metadata.GeomFiles {
 			if err := GetGeospatialData(&gd, rm.FileStore, g.Path, sourceCRS, destinationCRS); err != nil {
-				return gd, errors.Wrap(err, 1) 
+				return gd, errors.Wrap(err, 0) 
 			}
 		}
 		return gd, nil
 	}
 	err := errors.New("the model is not geospatial")
-	return gd, errors.Wrap(err, 1) 
+	return gd, errors.Wrap(err, 0) 
 
 }
 
@@ -251,7 +251,7 @@ func getModelFiles(rm *RasModel) error {
 
 	files, err := rm.FileStore.GetDir(prefix, false)
 	if err != nil {
-		return errors.Wrap(err, 1)
+		return errors.Wrap(err, 0)
 	}
 
 	for _, file := range *files {
@@ -302,17 +302,17 @@ func NewRasModel(key string, fs filestore.FileStore) (*RasModel, error) {
 
 	err := verifyPrjPath(key, &rm)
 	if err != nil {
-		return &rm, errors.Wrap(err, 1)
+		return &rm, errors.Wrap(err, 0)
 	}
 
 	err = getModelFiles(&rm)
 	if err != nil {
-		return &rm, errors.Wrap(err, 1)
+		return &rm, errors.Wrap(err, 0)
 	}
 
 	err = getPrjData(&rm)
 	if err != nil {
-		return &rm, errors.Wrap(err, 1)
+		return &rm, errors.Wrap(err, 0)
 	}
 
 	var rasWG rasWaitGroup
