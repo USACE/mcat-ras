@@ -6,6 +6,7 @@ import (
 	ras "app/tools"
 
 	"github.com/USACE/filestore"
+	"github.com/go-errors/errors" // warning: replaces standard errors
 	"github.com/labstack/echo/v4"
 )
 
@@ -29,7 +30,7 @@ func Index(fs *filestore.FileStore) echo.HandlerFunc {
 
 		rm, err := ras.NewRasModel(definitionFile, *fs)
 		if err != nil {
-			return c.JSON(http.StatusInternalServerError, SimpleResponse{http.StatusInternalServerError, err.Error()})
+			return c.JSON(http.StatusInternalServerError, SimpleResponse{http.StatusInternalServerError, err.Error(), err.(*errors.Error).ErrorStack()})
 		}
 		mod := rm.Index()
 

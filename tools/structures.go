@@ -5,6 +5,8 @@ import (
 	"math"
 	"strconv"
 	"strings"
+
+	"github.com/go-errors/errors" // warning: replaces standard errors
 )
 
 var conduitShapes map[int]string = map[int]string{
@@ -123,7 +125,7 @@ out:
 					if nvalues%interval == 0 {
 						val, err := parseFloat(sVal, 64)
 						if err != nil {
-							return values, i, err
+							return values, i, errors.Wrap(err, 1) 
 						}
 						values = append(values, val)
 					}
@@ -150,7 +152,7 @@ func getMaxMinElev(hsSc *bufio.Scanner, i int, nLines int, nSkipLines int, colWi
 	elevations, i, err := datafromTextBlock(hsSc, i, nLines, nSkipLines, colWidth, valueWidth, interval)
 
 	if err != nil {
-		return pair, i, err
+		return pair, i, errors.Wrap(err, 1) 
 	}
 
 	if len(elevations) == 0 {
@@ -159,12 +161,12 @@ func getMaxMinElev(hsSc *bufio.Scanner, i int, nLines int, nSkipLines int, colWi
 
 	maxElev, err := maxValue(elevations)
 	if err != nil {
-		return pair, i, err
+		return pair, i, errors.Wrap(err, 1) 
 	}
 
 	minElev, err := minValue(elevations)
 	if err != nil {
-		return pair, i, err
+		return pair, i, errors.Wrap(err, 1) 
 	}
 
 	pair = maxMinPairs{Max: maxElev, Min: minElev}
@@ -181,20 +183,20 @@ func getHighLowChord(hsSc *bufio.Scanner, i int, nElevText string, colWidth int,
 
 	nElev, err := strconv.Atoi(strings.TrimSpace(nElevText))
 	if err != nil {
-		return highLowPairs, i, err
+		return highLowPairs, i, errors.Wrap(err, 1) 
 	}
 
 	nLines := numberofLines(nElev, 80, 8)
 
 	highPair, i, err := getMaxMinElev(hsSc, i, nLines, nLines, 80, 8, 1)
 	if err != nil {
-		return highLowPairs, i, err
+		return highLowPairs, i, errors.Wrap(err, 1) 
 	}
 	highLowPairs[0] = highPair
 
 	lowPair, i, err := getMaxMinElev(hsSc, i, nLines, 0, 80, 8, 1)
 	if err != nil {
-		return highLowPairs, i, err
+		return highLowPairs, i, errors.Wrap(err, 1) 
 	}
 	highLowPairs[1] = lowPair
 
@@ -206,7 +208,7 @@ func stringtoFloat(s string) (float64, error) {
 	if trimmed != "" {
 		val, err := parseFloat(trimmed, 64)
 		if err != nil {
-			return 0, err
+			return 0, errors.Wrap(err, 1)
 		}
 		return val, nil
 	}
@@ -224,7 +226,8 @@ func getConduits(line string, single bool) (conduits, error) {
 	} else {
 		numbarrels, err := strconv.Atoi(strings.TrimSpace(lineData[11]))
 		if err != nil {
-			return conduit, err
+			return conduit, errors.Wrap(err, 1) 
+
 		}
 		conduit.NumBarrels = numbarrels
 		conduit.Name = strings.TrimSpace(lineData[12])
@@ -232,31 +235,36 @@ func getConduits(line string, single bool) (conduits, error) {
 
 	shapeID, err := strconv.Atoi(strings.TrimSpace(lineData[0]))
 	if err != nil {
-		return conduit, err
+		return conduit, errors.Wrap(err, 1) 
+
 	}
 	conduit.Shape = conduitShapes[shapeID]
 
 	rise, err := stringtoFloat(lineData[1])
 	if err != nil {
-		return conduit, err
+		return conduit, errors.Wrap(err, 1) 
+
 	}
 	conduit.Rise = rise
 
 	span, err := stringtoFloat(lineData[2])
 	if err != nil {
-		return conduit, err
+		return conduit, errors.Wrap(err, 1) 
+
 	}
 	conduit.Span = span
 
 	length, err := stringtoFloat(lineData[3])
 	if err != nil {
-		return conduit, err
+		return conduit, errors.Wrap(err, 1) 
+
 	}
 	conduit.Length = length
 
 	mannings, err := stringtoFloat(lineData[4])
 	if err != nil {
-		return conduit, err
+		return conduit, errors.Wrap(err, 1) 
+
 	}
 	conduit.ManningsN = mannings
 
@@ -268,7 +276,7 @@ func getCulvertData(hsSc *bufio.Scanner, i int, lineData []string) (culverts, in
 
 	station, err := parseFloat(strings.TrimSpace(lineData[1]), 64)
 	if err != nil {
-		return culvert, i, err
+		return culvert, i, errors.Wrap(err, 1) 
 	}
 	culvert.Station = station
 
@@ -280,7 +288,7 @@ func getCulvertData(hsSc *bufio.Scanner, i int, lineData []string) (culverts, in
 			var description string
 			description, i, err = getDescription(hsSc, i, "END DESCRIPTION:")
 			if err != nil {
-				return culvert, i, err
+				return culvert, i, errors.Wrap(err, 1) 
 			}
 			culvert.Description += description
 
@@ -293,14 +301,14 @@ func getCulvertData(hsSc *bufio.Scanner, i int, lineData []string) (culverts, in
 			nextLineData := strings.Split(hsSc.Text(), ",")
 			deckWidth, err := parseFloat(strings.TrimSpace(nextLineData[0]), 64)
 			if err != nil {
-				return culvert, i, err
+				return culvert, i, errors.Wrap(err, 1) 
 			}
 			culvert.DeckWidth = deckWidth
 
 			var upHighLowPair [2]maxMinPairs
 			upHighLowPair, i, err = getHighLowChord(hsSc, i, nextLineData[4], 80, 8)
 			if err != nil {
-				return culvert, i, err
+				return culvert, i, errors.Wrap(err, 1) 
 			}
 			culvert.UpHighChord = upHighLowPair[0]
 			culvert.UpLowChord = upHighLowPair[1]
@@ -308,7 +316,7 @@ func getCulvertData(hsSc *bufio.Scanner, i int, lineData []string) (culverts, in
 			var downHighLowPair [2]maxMinPairs
 			downHighLowPair, i, err = getHighLowChord(hsSc, i, nextLineData[5], 80, 8)
 			if err != nil {
-				return culvert, i, err
+				return culvert, i, errors.Wrap(err, 1) 
 			}
 			culvert.DownHighChord = downHighLowPair[0]
 			culvert.DownLowChord = downHighLowPair[1]
@@ -316,7 +324,7 @@ func getCulvertData(hsSc *bufio.Scanner, i int, lineData []string) (culverts, in
 		case strings.HasPrefix(line, "Culvert="):
 			conduit, err := getConduits(line, true)
 			if err != nil {
-				return culvert, i, err
+				return culvert, i, errors.Wrap(err, 1) 
 			}
 			culvert.Conduits = append(culvert.Conduits, conduit)
 			culvert.NumConduits++
@@ -324,7 +332,7 @@ func getCulvertData(hsSc *bufio.Scanner, i int, lineData []string) (culverts, in
 		case strings.HasPrefix(line, "Multiple Barrel Culv="):
 			conduit, err := getConduits(line, false)
 			if err != nil {
-				return culvert, i, err
+				return culvert, i, errors.Wrap(err, 1) 
 			}
 			culvert.Conduits = append(culvert.Conduits, conduit)
 			culvert.NumConduits++
@@ -344,7 +352,7 @@ func getBridgeData(hsSc *bufio.Scanner, i int, lineData []string) (bridges, int,
 
 	station, err := parseFloat(strings.TrimSpace(lineData[1]), 64)
 	if err != nil {
-		return bridge, i, err
+		return bridge, i, errors.Wrap(err, 1) 
 	}
 	bridge.Station = station
 
@@ -356,7 +364,7 @@ func getBridgeData(hsSc *bufio.Scanner, i int, lineData []string) (bridges, int,
 			var description string
 			description, i, err = getDescription(hsSc, i, "END DESCRIPTION:")
 			if err != nil {
-				return bridge, i, err
+				return bridge, i, errors.Wrap(err, 1) 
 			}
 			bridge.Description += description
 
@@ -369,14 +377,14 @@ func getBridgeData(hsSc *bufio.Scanner, i int, lineData []string) (bridges, int,
 			nextLineData := strings.Split(hsSc.Text(), ",")
 			deckWidth, err := parseFloat(strings.TrimSpace(nextLineData[0]), 64)
 			if err != nil {
-				return bridge, i, err
+				return bridge, i, errors.Wrap(err, 1) 
 			}
 			bridge.DeckWidth = deckWidth
 
 			var upHighLowPair [2]maxMinPairs
 			upHighLowPair, i, err = getHighLowChord(hsSc, i, nextLineData[4], 80, 8)
 			if err != nil {
-				return bridge, i, err
+				return bridge, i, errors.Wrap(err, 1) 
 			}
 			bridge.UpHighChord = upHighLowPair[0]
 			bridge.UpLowChord = upHighLowPair[1]
@@ -384,7 +392,7 @@ func getBridgeData(hsSc *bufio.Scanner, i int, lineData []string) (bridges, int,
 			var downHighLowPair [2]maxMinPairs
 			downHighLowPair, i, err = getHighLowChord(hsSc, i, nextLineData[5], 80, 8)
 			if err != nil {
-				return bridge, i, err
+				return bridge, i, errors.Wrap(err, 1) 
 			}
 			bridge.DownHighChord = downHighLowPair[0]
 			bridge.DownLowChord = downHighLowPair[1]
@@ -411,19 +419,22 @@ func getGates(nextLine string) (gates, error) {
 
 	width, err := stringtoFloat(nextLineData[1])
 	if err != nil {
-		return gate, err
+		return gate, errors.Wrap(err, 1) 
+
 	}
 	gate.Width = width
 
 	height, err := stringtoFloat(nextLineData[2])
 	if err != nil {
-		return gate, err
+		return gate, errors.Wrap(err, 1) 
+
 	}
 	gate.Height = height
 
 	numopenings, err := strconv.Atoi(strings.TrimSpace(nextLineData[13]))
 	if err != nil {
-		return gate, err
+		return gate, errors.Wrap(err, 1) 
+
 	}
 	gate.NumOpenings = numopenings
 
@@ -435,7 +446,8 @@ func getWeirData(rm *RasModel, fn string, i int) (weirs, error) {
 
 	f, err := rm.FileStore.GetObject(fn)
 	if err != nil {
-		return weir, err
+		return weir, errors.Wrap(err, 1) 
+
 	}
 	defer f.Close()
 
@@ -448,7 +460,8 @@ func getWeirData(rm *RasModel, fn string, i int) (weirs, error) {
 			lineData := strings.Split(rightofEquals(wSc.Text()), ",")
 			station, err := parseFloat(strings.TrimSpace(lineData[1]), 64)
 			if err != nil {
-				return weir, err
+				return weir, errors.Wrap(err, 1) 
+
 			}
 			weir.Station = station
 		} else if wi > i {
@@ -457,7 +470,8 @@ func getWeirData(rm *RasModel, fn string, i int) (weirs, error) {
 			case strings.HasPrefix(line, "BEGIN DESCRIPTION"):
 				description, _, err := getDescription(wSc, 0, "END DESCRIPTION:")
 				if err != nil {
-					return weir, err
+					return weir, errors.Wrap(err, 1) 
+
 				}
 				weir.Description += description
 
@@ -467,13 +481,15 @@ func getWeirData(rm *RasModel, fn string, i int) (weirs, error) {
 			case strings.HasPrefix(line, "#Inline Weir SE="):
 				nElev, err := strconv.Atoi(strings.TrimSpace(rightofEquals(line)))
 				if err != nil {
-					return weir, err
+					return weir, errors.Wrap(err, 1) 
+
 				}
 				nLines := numberofLines(nElev*2, 80, 8)
 
 				elev, _, err := getMaxMinElev(wSc, 0, nLines, 0, 80, 8, 2)
 				if err != nil {
-					return weir, err
+					return weir, errors.Wrap(err, 1) 
+
 				}
 				weir.WeirElev = elev
 
@@ -482,7 +498,8 @@ func getWeirData(rm *RasModel, fn string, i int) (weirs, error) {
 				nextLineData := strings.Split(wSc.Text(), ",")
 				weirWidth, err := parseFloat(strings.TrimSpace(nextLineData[1]), 64)
 				if err != nil {
-					return weir, err
+					return weir, errors.Wrap(err, 1) 
+
 				}
 				weir.WeirWidth = weirWidth
 
@@ -490,7 +507,8 @@ func getWeirData(rm *RasModel, fn string, i int) (weirs, error) {
 				wSc.Scan()
 				gate, err := getGates(wSc.Text())
 				if err != nil {
-					return weir, err
+					return weir, errors.Wrap(err, 1) 
+
 				}
 				weir.Gates = append(weir.Gates, gate)
 				weir.NumGates++
@@ -498,7 +516,8 @@ func getWeirData(rm *RasModel, fn string, i int) (weirs, error) {
 			case strings.HasPrefix(line, "IW Culv="):
 				conduit, err := getConduits(line, false)
 				if err != nil {
-					return weir, err
+					return weir, errors.Wrap(err, 1) 
+
 				}
 				weir.Conduits = append(weir.Conduits, conduit)
 				weir.NumConduits++
@@ -522,7 +541,8 @@ func getHydraulicStructureData(rm *RasModel, fn string, idx int) (hydraulicStruc
 
 	f, err := rm.FileStore.GetObject(fn)
 	if err != nil {
-		return structures, err
+		return structures, errors.Wrap(err, 1) 
+
 	}
 	defer f.Close()
 
@@ -541,7 +561,8 @@ func getHydraulicStructureData(rm *RasModel, fn string, idx int) (hydraulicStruc
 				data := strings.Split(rightofEquals(line), ",")
 				structureType, err := strconv.Atoi(strings.TrimSpace(data[0]))
 				if err != nil {
-					return structures, err
+					return structures, errors.Wrap(err, 1) 
+
 				}
 				switch structureType {
 				case 1:
@@ -551,7 +572,8 @@ func getHydraulicStructureData(rm *RasModel, fn string, idx int) (hydraulicStruc
 					var culvert culverts
 					culvert, i, err = getCulvertData(hsSc, i, data)
 					if err != nil {
-						return structures, err
+						return structures, errors.Wrap(err, 1) 
+
 					}
 					cData.Culverts = append(cData.Culverts, culvert)
 					cData.NumCulverts++
@@ -560,7 +582,8 @@ func getHydraulicStructureData(rm *RasModel, fn string, idx int) (hydraulicStruc
 					var bridge bridges
 					bridge, i, err = getBridgeData(hsSc, i, data)
 					if err != nil {
-						return structures, err
+						return structures, errors.Wrap(err, 1) 
+
 					}
 					bData.Bridges = append(bData.Bridges, bridge)
 					bData.NumBridges++
@@ -568,7 +591,8 @@ func getHydraulicStructureData(rm *RasModel, fn string, idx int) (hydraulicStruc
 				case 5:
 					weir, err := getWeirData(rm, fn, i)
 					if err != nil {
-						return structures, err
+						return structures, errors.Wrap(err, 1) 
+
 					}
 					wData.Weirs = append(wData.Weirs, weir)
 					wData.NumWeirs++

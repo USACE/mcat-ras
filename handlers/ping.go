@@ -9,8 +9,9 @@ import (
 )
 
 type SimpleResponse struct {
-	Status  int
-	Message string
+	Status  	 int
+	Message 	 string
+	StackTrace   string
 }
 
 // Ping godoc
