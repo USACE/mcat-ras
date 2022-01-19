@@ -2,9 +2,10 @@ package tools
 
 import (
 	"bufio"
-	"errors"
 	"strconv"
 	"strings"
+
+	"github.com/go-errors/errors" // warning: replaces standard errors
 )
 
 func maxValue(values []float64) (float64, error) {

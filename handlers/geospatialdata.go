@@ -1,12 +1,14 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 
 	"app/config"
 
 	ras "app/tools"
 
+	"github.com/go-errors/errors" // warning: replaces standard errors
 	"github.com/labstack/echo/v4"
 )
 
@@ -30,12 +32,12 @@ func GeospatialData(ac *config.APIConfig) echo.HandlerFunc {
 
 		rm, err := ras.NewRasModel(definitionFile, *ac.FileStore)
 		if err != nil {
-			return c.JSON(http.StatusInternalServerError, SimpleResponse{http.StatusInternalServerError, err.Error()})
+			return c.JSON(http.StatusInternalServerError, SimpleResponse{http.StatusInternalServerError, fmt.Sprintf("Go error encountered: %v", err.Error()), err.(*errors.Error).ErrorStack()})
 		}
 
 		data, err := rm.GeospatialData(ac.DestinationCRS)
 		if err != nil {
-			return c.JSON(http.StatusInternalServerError, SimpleResponse{http.StatusInternalServerError, err.Error()})
+			return c.JSON(http.StatusInternalServerError, SimpleResponse{http.StatusInternalServerError, fmt.Sprintf("Go error encountered: %v", err.Error()), err.(*errors.Error).ErrorStack()})
 		}
 
 		return c.JSON(http.StatusOK, data)

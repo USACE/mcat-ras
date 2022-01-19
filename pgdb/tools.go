@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-errors/errors" // warning: replaces standard errors
 	"github.com/jmoiron/sqlx"
 )
 
@@ -25,14 +26,14 @@ type ETLMetaData struct {
 func getCollectionID(tx *sqlx.Tx, definitionFile string) (collectionID int, err error) {
 
 	if err := tx.Get(&collectionID, getCollectionIDSQL, definitionFile); err != nil {
-		return 0, err
+		return 0, errors.Wrap(err, 0)
 	}
 	return collectionID, nil
 }
 
 func getModelID(tx *sqlx.Tx, definitionFile string) (modelID int, err error) {
 	if err := tx.Get(&modelID, getModelIDSQL, definitionFile); err != nil {
-		return 0, err
+		return 0, errors.Wrap(err, 0)
 	}
 	return modelID, nil
 }
@@ -45,16 +46,16 @@ func upsertModel(tx *sqlx.Tx, rm *ras.RasModel, definitionFile string, collectio
 
 	etlMeta, err := json.Marshal(etlMetaRaw)
 	if err != nil {
-		return 0, err
+		return 0, errors.Wrap(err, 0)
 	}
 
 	modelMeta, err := json.Marshal(rm.Metadata)
 	if err != nil {
-		return 0, err
+		return 0, errors.Wrap(err, 0)
 	}
 
 	if err := tx.Get(&modelID, upsertModelSQL, collectionID, modelName, rm.Type, definitionFile, modelMeta, etlMeta); err != nil {
-		return 0, err
+		return 0, errors.Wrap(err, 0)
 	}
 
 	return modelID, nil
@@ -67,7 +68,7 @@ func upsertRiver(tx *sqlx.Tx, river ras.VectorLayer, geometryFileID int) (riverI
 	reachName := strings.TrimSpace(riverReach[1])
 
 	if err := tx.Get(&riverID, upsertRiversSQL, geometryFileID, riverName, reachName, river.Geometry); err != nil {
-		return 0, err
+		return 0, errors.Wrap(err, 0)
 	}
 	return riverID, nil
 }
@@ -77,18 +78,18 @@ func upsertModelInfo(definitionFile string, ac *config.APIConfig, db *sqlx.DB) e
 	tx, err := db.BeginTxx(ctx, nil)
 	if err != nil {
 		log.Println(err)
-		return err
+		return errors.Wrap(err, 0)
 	}
 
 	rm, err := ras.NewRasModel(definitionFile, *ac.FileStore)
 	if err != nil {
-		return err
+		return errors.Wrap(err, 0)
 	}
 
 	collectionID, err := getCollectionID(tx, definitionFile)
 	if err != nil {
 		log.Println("Collection ID:", collectionID, err)
-		return err
+		return errors.Wrap(err, 0)
 	}
 
 	modelID, err := upsertModel(tx, rm, definitionFile, collectionID)
@@ -96,14 +97,14 @@ func upsertModelInfo(definitionFile string, ac *config.APIConfig, db *sqlx.DB) e
 		fmt.Println("Model ID:", modelID, "Name|", definitionFile)
 		log.Println("Error: ", err, "Rolling back")
 		tx.Rollback()
-		return err
+		return errors.Wrap(err, 0)
 	}
 
 	err = tx.Commit()
 	if err != nil {
 		fmt.Println("Model ID:", modelID, "Name|", definitionFile)
 		log.Println("Transaction Commit Error|", err)
-		return err
+		return errors.Wrap(err, 0)
 	}
 
 	return nil
@@ -114,26 +115,26 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 	tx, err := db.BeginTxx(ctx, nil)
 	if err != nil {
 		log.Println(err)
-		return err
+		return errors.Wrap(err, 0)
 	}
 
 	rm, err := ras.NewRasModel(definitionFile, *ac.FileStore)
 	if err != nil {
-		return err
+		return errors.Wrap(err, 0)
 	}
 
 	modelID, err := getModelID(tx, definitionFile)
 	fmt.Println("Model ID:", modelID, "Name|", definitionFile)
 	if err != nil {
 		log.Println(err)
-		return err
+		return errors.Wrap(err, 0)
 	}
 
 	if rm.IsGeospatial() {
 
 		geodata, err := rm.GeospatialData(ac.DestinationCRS)
 		if err != nil {
-			return err
+			return errors.Wrap(err, 0)
 		}
 
 		// Iterate over geometry files
@@ -155,7 +156,7 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 				geometryFile.Description); err != nil {
 				log.Println("Geometry File", geometryFile.FileExt, "|", err)
 				tx.Rollback()
-				return err
+				return errors.Wrap(err, 0)
 			}
 
 			// Iterate over features in geometry file and add to tables as needed
@@ -171,7 +172,7 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 				if err != nil {
 					log.Println(err)
 					tx.Rollback()
-					return err
+					return errors.Wrap(err, 0)
 				}
 				riverIDMap[river.FeatureName] = riverID
 			}
@@ -186,14 +187,14 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 				if err != nil {
 					log.Println("XS", geometryFile.FileExt, "|", err)
 					tx.Rollback()
-					return err
+					return errors.Wrap(err, 0)
 				}
 
 				riverID := riverIDMap[riverReach.(string)]
 				if err = tx.Get(&xsID, upsertXSSQL, riverID, xsStation, cutLineProfileMatch, xs.Geometry); err != nil {
 					log.Println(err)
 					tx.Rollback()
-					return err
+					return errors.Wrap(err, 0)
 				}
 				riverReachXSName := fmt.Sprintf("%s-%s", riverReach, xs.FeatureName)
 				xsIDMap[riverReachXSName] = xsID
@@ -205,14 +206,14 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 				xsID := xsIDMap[riverReachXSName]
 				bankStation, err := strconv.ParseFloat(banks.FeatureName, 64)
 				if err != nil {
-					return err
+					return errors.Wrap(err, 0)
 				}
 
 				_, err = tx.Exec(upsertBanksSQL, xsID, bankStation, banks.Geometry)
 				if err != nil {
 					log.Println("Banks", geometryFile.FileExt, "|", err)
 					tx.Rollback()
-					return err
+					return errors.Wrap(err, 0)
 				}
 			}
 
@@ -222,7 +223,7 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 				if err != nil {
 					log.Println("Storage Areas", geometryFile.FileExt, "|", err)
 					tx.Rollback()
-					return err
+					return errors.Wrap(err, 0)
 				}
 			}
 		}
@@ -230,7 +231,7 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 		err = tx.Commit()
 		if err != nil {
 			log.Println("Transaction Commit Error|", err)
-			return err
+			return errors.Wrap(err, 0)
 		}
 
 	}

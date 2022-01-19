@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/USACE/filestore"
+	"github.com/go-errors/errors" // warning: replaces standard errors
 )
 
 // ProjectMetadata contains information scraped from all files listed in the .prj file
@@ -38,13 +39,16 @@ func readFirstLine(fs filestore.FileStore, fn string) (string, error) {
 	file, err := fs.GetObject(fn)
 	if err != nil {
 		fmt.Println("Couldnt open the file", fn)
-		return "", err
+		return "", errors.Wrap(err, 0)
 	}
 	defer file.Close()
 
 	reader := bufio.NewReader(file)
 	line, err := reader.ReadString('\n')
-	return rmNewLineChar(line), err
+	if err != nil {
+		return "", errors.Wrap(err, 0)
+	}
+	return rmNewLineChar(line), nil
 }
 
 func rmNewLineChar(s string) string {
@@ -55,15 +59,15 @@ func rmNewLineChar(s string) string {
 func verifyPrjPath(key string, rm *RasModel) error {
 
 	if filepath.Ext(key) != ".prj" {
-		return fmt.Errorf("%s is not a .prj file", key)
+		return errors.Errorf("%s is not a .prj file", key)
 	}
 
 	firstLine, err := readFirstLine(rm.FileStore, key)
 	if err != nil {
-		return err
+		return errors.Wrap(err, 0)
 	}
 	if !strings.Contains(firstLine, "Proj Title=") {
-		return fmt.Errorf("%s is not a RAS Project file", key)
+		return errors.Errorf("%s is not a RAS Project file", key)
 	}
 
 	rm.Metadata.ProjFilePath = key
@@ -78,7 +82,7 @@ func getPrjData(rm *RasModel) error {
 
 	f, err := rm.FileStore.GetObject(rm.Metadata.ProjFilePath)
 	if err != nil {
-		return err
+		return errors.Wrap(err, 0)
 	}
 	defer f.Close()
 
@@ -89,17 +93,17 @@ func getPrjData(rm *RasModel) error {
 
 		match, err := regexp.MatchString("=", line)
 		if err != nil {
-			return err
+			return errors.Wrap(err, 0)
 		}
 
 		beginDescription, err := regexp.MatchString("BEGIN DESCRIPTION", line)
 		if err != nil {
-			return err
+			return errors.Wrap(err, 0)
 		}
 
 		units, err := regexp.MatchString("Units", line)
 		if err != nil {
-			return err
+			return errors.Wrap(err, 0)
 		}
 
 		if match {
