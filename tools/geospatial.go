@@ -417,7 +417,7 @@ func getBreakLine(sc *bufio.Scanner, transform gdal.CoordinateTransform) (Vector
 
 	xyPairs, err := getDataPairsfromTextBlock("BreakLine Polyline=", sc, 64, 16)
 	if err != nil {
-		return layer, err
+		return layer, errors.Wrap(err, 0)
 	}
 
 	// If less than 2 xyPairs, it is not a valid line.
@@ -438,10 +438,10 @@ func getBreakLine(sc *bufio.Scanner, transform gdal.CoordinateTransform) (Vector
 
 	wkb, err := multiLineString.ToWKB()
 	if err != nil {
-		return layer, err
+		return layer, errors.Wrap(err, 0)
 	}
 	layer.Geometry = wkb
-	return layer, err
+	return layer, nil
 }
 
 // Extract name and geometry from Boundary Condition text block and return as Vector Layer
@@ -451,7 +451,7 @@ func getBCLine(sc *bufio.Scanner, transform gdal.CoordinateTransform) (VectorLay
 
 	xyPairs, err := getDataPairsfromTextBlock("BC Line Arc=", sc, 64, 16)
 	if err != nil {
-		return layer, err
+		return layer, errors.Wrap(err, 0)
 	}
 
 	// If less than 2 xyPairs, it is not a valid line.
@@ -472,10 +472,10 @@ func getBCLine(sc *bufio.Scanner, transform gdal.CoordinateTransform) (VectorLay
 
 	wkb, err := multiLineString.ToWKB()
 	if err != nil {
-		return layer, err
+		return layer, errors.Wrap(err, 0)
 	}
 	layer.Geometry = wkb
-	return layer, err
+	return layer, nil
 }
 
 // Extract name and geometry from Connection text block and return as Vector Layer
@@ -484,7 +484,7 @@ func getConnectionLine(sc *bufio.Scanner, transform gdal.CoordinateTransform) (V
 
 	xyPairs, err := getDataPairsfromTextBlock("Connection Line=", sc, 64, 16)
 	if err != nil {
-		return layer, err
+		return layer, errors.Wrap(err, 0)
 	}
 
 	// If less than 2 xyPairs, it is not a valid line.
@@ -505,10 +505,10 @@ func getConnectionLine(sc *bufio.Scanner, transform gdal.CoordinateTransform) (V
 
 	wkb, err := multiLineString.ToWKB()
 	if err != nil {
-		return layer, err
+		return layer, errors.Wrap(err, 0)
 	}
 	layer.Geometry = wkb
-	return layer, err
+	return layer, nil
 }
 
 // GetGeospatialData ...
@@ -565,7 +565,7 @@ func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string,
 				case err.Error() == "Invalid Line Geometry":
 					log.Println("Skipped", blLayer.FeatureName, err.Error())
 				default:
-					return err
+					return errors.Wrap(err, 0)
 				}
 			default:
 				f.BreakLines = append(f.BreakLines, blLayer)
@@ -579,7 +579,7 @@ func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string,
 				case err.Error() == "Invalid Line Geometry":
 					log.Println("Skipped", bcLayer.FeatureName, err.Error())
 				default:
-					return err
+					return errors.Wrap(err, 0)
 				}
 			default:
 				f.BCLines = append(f.BCLines, bcLayer)
@@ -593,7 +593,7 @@ func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string,
 				case err.Error() == "Invalid Line Geometry":
 					log.Println("Skipped", connLayer.FeatureName, err.Error())
 				default:
-					return err
+					return errors.Wrap(err, 0)
 				}
 			default:
 				f.Connections = append(f.Connections, connLayer)
