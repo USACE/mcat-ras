@@ -23,6 +23,7 @@ type ETLMetaData struct {
 	ProjectionSourcePath string `json:"projection_source_path"`
 }
 
+// Get collection ID for collection whose s3 key is LIKE definition file
 func getCollectionID(tx *sqlx.Tx, definitionFile string) (collectionID int, err error) {
 
 	if err := tx.Get(&collectionID, getCollectionIDSQL, definitionFile); err != nil {
@@ -38,6 +39,7 @@ func getModelID(tx *sqlx.Tx, definitionFile string) (modelID int, err error) {
 	return modelID, nil
 }
 
+// Inserts a record to the model table
 func upsertModel(tx *sqlx.Tx, rm *ras.RasModel, definitionFile string, collectionID int) (modelID int, err error) {
 	projFileName := filepath.Base(definitionFile)
 	modelName := strings.TrimSuffix(projFileName, filepath.Ext(projFileName))
@@ -73,6 +75,9 @@ func upsertRiver(tx *sqlx.Tx, river ras.VectorLayer, geometryFileID int) (riverI
 	return riverID, nil
 }
 
+// Creates Ras Model object and get Collection ID. 
+// Calls upsertModel to add record to database.
+// Expects collection record already exist collection table.
 func upsertModelInfo(definitionFile string, ac *config.APIConfig, db *sqlx.DB) error {
 	ctx := context.Background()
 	tx, err := db.BeginTxx(ctx, nil)
@@ -81,14 +86,14 @@ func upsertModelInfo(definitionFile string, ac *config.APIConfig, db *sqlx.DB) e
 		return errors.Wrap(err, 0)
 	}
 
-	rm, err := ras.NewRasModel(definitionFile, *ac.FileStore)
-	if err != nil {
-		return errors.Wrap(err, 0)
-	}
-
 	collectionID, err := getCollectionID(tx, definitionFile)
 	if err != nil {
 		log.Println("Collection ID:", collectionID, err)
+		return errors.Wrap(err, 0)
+	}
+
+	rm, err := ras.NewRasModel(definitionFile, *ac.FileStore)
+	if err != nil {
 		return errors.Wrap(err, 0)
 	}
 
@@ -110,6 +115,10 @@ func upsertModelInfo(definitionFile string, ac *config.APIConfig, db *sqlx.DB) e
 	return nil
 }
 
+// Creates Ras Model object and get Model ID. 
+// Calls receiver function GeospatialData create geometry features.
+// Add records to multiple tables.
+// Expects model record already exist in model table.
 func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.DB) error {
 	ctx := context.Background()
 	tx, err := db.BeginTxx(ctx, nil)
@@ -118,15 +127,15 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 		return errors.Wrap(err, 0)
 	}
 
-	rm, err := ras.NewRasModel(definitionFile, *ac.FileStore)
-	if err != nil {
-		return errors.Wrap(err, 0)
-	}
-
 	modelID, err := getModelID(tx, definitionFile)
 	fmt.Println("Model ID:", modelID, "Name|", definitionFile)
 	if err != nil {
 		log.Println(err)
+		return errors.Wrap(err, 0)
+	}
+
+	rm, err := ras.NewRasModel(definitionFile, *ac.FileStore)
+	if err != nil {
 		return errors.Wrap(err, 0)
 	}
 

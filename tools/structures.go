@@ -32,7 +32,7 @@ type hydraulicStructures struct {
 }
 
 // Store HEC-RAS 2D Connections
-type connections2d struct {
+type connections struct {
 	Name        string      `json:"Connection Name"`
 	Description string      `json:"Connection Description"`
 	UpSA        string      `json:"Connection Up SA"`
@@ -51,7 +51,7 @@ type culvertData struct {
 }
 
 // Store HEC-RAS 1D Culverts. This is different than culverts
-// associated with inline structures or 2D connections
+// associated with inline structures or connections
 type culverts struct {
 	Name          string
 	Station       float64
@@ -71,7 +71,7 @@ type maxMinPairs struct {
 	Min float64
 }
 
-// Store Culvert Groups in HEC-RAS 1D Culverts, 1D Inline Structures, and 2D Connections
+// Store Culvert Groups in HEC-RAS 1D Culverts, 1D Inline Structures, and Connections
 type conduits struct {
 	Name       string
 	NumBarrels int `json:"Num Barrels"`
@@ -118,7 +118,7 @@ type weirs struct {
 	Conduits    []conduits `json:"Culvert Conduits"`
 }
 
-// Store Gates Groups in HEC-RAS 1D Inline Structures and 2D Connections
+// Store Gates Groups in HEC-RAS 1D Inline Structures and Connections
 type gates struct {
 	Name        string
 	Width       float64
@@ -242,7 +242,7 @@ func stringtoFloat(s string) (float64, error) {
 }
 
 // Extract data from Culvert Groups in HEC-RAS 1D Culverts,
-// 1D Inline Structures, and 2D Connections
+// 1D Inline Structures, and Connections
 func getConduits(line string, single bool) (conduits, error) {
 	lineData := strings.Split(rightofEquals(line), ",")
 	conduit := conduits{}
@@ -440,7 +440,7 @@ func getBridgeData(hsSc *bufio.Scanner, i int, lineData []string) (bridges, int,
 	return bridge, i, nil
 }
 
-// Extract data from Gates Groups in 1D Inline Structures and 2D Connections
+// Extract data from Gates Groups in 1D Inline Structures and Connections
 func getGates(nextLine string) (gates, error) {
 	gate := gates{}
 
@@ -647,9 +647,9 @@ func getHydraulicStructureData(rm *RasModel, fn string, idx int) (hydraulicStruc
 }
 
 
-// Extract data from 2D Connections
-func getConnectionsData(rm *RasModel, fn string, i int) (connections2d, error) {
-	connection := connections2d{}
+// Extract data from Connections
+func getConnectionsData(rm *RasModel, fn string, i int) (connections, error) {
+	connection := connections{}
 
 	f, err := rm.FileStore.GetObject(fn)
 	if err != nil {
@@ -671,7 +671,7 @@ func getConnectionsData(rm *RasModel, fn string, i int) (connections2d, error) {
 			line := cSc.Text()
 			switch {
 			case strings.HasPrefix(line, "Connection Desc="):
-				description, _, err := getDescriptionConnections(cSc, 0, "Connection Line=")
+				description, err := getDescriptionConnections(cSc, "Connection Line=")
 				if err != nil {
 					return connection, err
 				}
@@ -684,14 +684,14 @@ func getConnectionsData(rm *RasModel, fn string, i int) (connections2d, error) {
 				connection.DnSA = rightofEquals(line)
 
 			case strings.HasPrefix(line, "Conn Weir WD="):
-				weirWidth, err := strconv.ParseFloat(strings.TrimSpace(rightofEquals(line)), 64)
+				weirWidth, err := strconv.ParseFloat(rightofEquals(line), 64)
 				if err != nil {
 					return connection, err
 				}
 				connection.WeirWidth = weirWidth
 
 			case strings.HasPrefix(line, "Conn Weir SE="):
-				nElev, err := strconv.Atoi(strings.TrimSpace(rightofEquals(line)))
+				nElev, err := strconv.Atoi(rightofEquals(line))
 				if err != nil {
 					return connection, err
 				}

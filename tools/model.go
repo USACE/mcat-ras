@@ -194,7 +194,8 @@ func (rm *RasModel) Index() Model {
 	return mod
 }
 
-// IsGeospatial ...
+// Checks if a model is geospatial or not.
+// Versions less than 4.0 are not considered geospatial
 func (rm *RasModel) IsGeospatial() bool {
 	if rm.Metadata.Projection == "" {
 		fmt.Println(rm.Metadata.ProjFilePath, "| no valid coordinate reference system")

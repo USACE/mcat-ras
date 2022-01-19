@@ -17,7 +17,7 @@ type GeomFileContents struct {
 	ProgramVersion string                `json:"Program Version"`
 	Description    string                `json:"Description"`
 	Structures     []hydraulicStructures `json:"Hydraulic Structures"`
-	Connections    []connections2d       `json:"2d Connections"`
+	Connections    []connections         `json:"Connections"`
 	Notes          string
 }
 
@@ -84,7 +84,7 @@ func getGeomData(rm *RasModel, fn string, wg *sync.WaitGroup) {
 		case strings.HasPrefix(line, "Connection="):
 			connections, err := getConnectionsData(rm, fn, idx)
 			if err != nil {
-				fmt.Println(err)
+				log.Println("Connections|", meta.FileExt, err)
 				continue
 			}
 			meta.Connections = append(meta.Connections, connections)
