@@ -12,12 +12,14 @@ import (
 // GeomFileContents keywords  and data container for ras flow file search
 type GeomFileContents struct {
 	Path           string
-	FileExt        string                `json:"File Extension"`
-	GeomTitle      string                `json:"Geom Title"`
-	ProgramVersion string                `json:"Program Version"`
-	Description    string                `json:"Description"`
-	Structures     []hydraulicStructures `json:"Hydraulic Structures"`
-	Connections    []connections         `json:"Connections"`
+	FileExt        string               	`json:"File Extension"`
+	GeomTitle      string               	`json:"Geom Title"`
+	ProgramVersion string                	`json:"Program Version"`
+	Description    string                	`json:"Description"`
+	Structures     []hydraulicStructures 	`json:"Hydraulic Structures"`
+	StorageAreas   map[string]storageArea   `json:"Storage Areas"`
+	TwoDAreas      map[string]twoDArea      `json:"2D Areas"`
+	Connections    map[string]connection    `json:"Connections"`
 	Notes          string
 }
 
@@ -26,7 +28,13 @@ func getGeomData(rm *RasModel, fn string, wg *sync.WaitGroup) {
 
 	defer wg.Done()
 
-	meta := GeomFileContents{Path: fn, FileExt: filepath.Ext(fn)}
+	meta := GeomFileContents{
+		Path: fn,
+		FileExt: filepath.Ext(fn),
+		StorageAreas: make(map[string]storageArea),
+		TwoDAreas: make(map[string]twoDArea),
+		Connections: make(map[string]connection),
+	}
 
 	var err error
 	msg := fmt.Sprintf("%s failed to process.", filepath.Base(fn))
@@ -54,6 +62,7 @@ func getGeomData(rm *RasModel, fn string, wg *sync.WaitGroup) {
 		idx++
 		line := sc.Text()
 		switch {
+			
 		case strings.HasPrefix(line, "Geom Title="):
 			meta.GeomTitle = rightofEquals(line)
 
@@ -79,16 +88,47 @@ func getGeomData(rm *RasModel, fn string, wg *sync.WaitGroup) {
 			header = false
 
 		case strings.HasPrefix(line, "Storage Area="):
+			areaName, areaData, err := getAreasData(rm, fn, idx)
+			if err != nil {
+				log.Println("SA/2D Areas|", meta.FileExt, err)
+				continue
+			}
+			switch areaData.(type) {
+
+			case storageArea:
+				meta.StorageAreas[areaName] = areaData.(storageArea)
+
+			case twoDArea:
+				meta.TwoDAreas[areaName] = areaData.(twoDArea)
+			} 
 			header = false
 
 		case strings.HasPrefix(line, "Connection="):
-			connections, err := getConnectionsData(rm, fn, idx)
+			connName, connecData, err := getConnectionsData(rm, fn, idx)
 			if err != nil {
 				log.Println("Connections|", meta.FileExt, err)
 				continue
 			}
-			meta.Connections = append(meta.Connections, connections)
+			meta.Connections[connName] = connecData
 			header = false
+
+		case strings.HasPrefix(line, "BC Line Name="):
+			bcArea, bc, err := getBCLineData(rm, fn, idx)
+			if err != nil {
+				log.Println("BC Line |", meta.FileExt, err)
+				continue
+			}
+			if val, ok := meta.StorageAreas[bcArea]; ok {
+				val.NumBCLines++
+				val.BCLines = append(val.BCLines, bc)
+				meta.StorageAreas[bcArea] = val
+			} else if val, ok := meta.TwoDAreas[bcArea]; ok {
+				val.NumBCLines++
+				val.BCLines = append(val.BCLines, bc)
+				meta.TwoDAreas[bcArea] = val
+			}
+			header = false
+
 
 		}
 	}
