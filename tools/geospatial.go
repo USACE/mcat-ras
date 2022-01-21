@@ -23,19 +23,19 @@ type GeoData struct {
 
 // Features ...
 type Features struct {
-	Rivers              []VectorLayer
-	XS                  []VectorLayer
-	Banks               []VectorLayer
-	StorageAreas        []VectorLayer
-	TwoDAreas           []VectorLayer
-	HydraulicStructures []VectorLayer
-	Connections         []VectorLayer
-	BCLines             []VectorLayer
-	BreakLines          []VectorLayer	
+	Rivers              []VectorFeature
+	XS                  []VectorFeature
+	Banks               []VectorFeature
+	StorageAreas        []VectorFeature
+	TwoDAreas           []VectorFeature
+	HydraulicStructures []VectorFeature
+	Connections         []VectorFeature
+	BCLines             []VectorFeature
+	BreakLines          []VectorFeature	
 }
 
-// VectorLayer ...
-type VectorLayer struct {
+// VectorFeature ...
+type VectorFeature struct {
 	FeatureName string                 `json:"feature_name"`
 	Fields      map[string]interface{} `json:"fields"`
 	Geometry    []uint8                `json:"geometry"`
@@ -241,13 +241,13 @@ func toNumeric(s string) (string, error) {
 	return num, nil
 }
 
-func getRiverCenterline(sc *bufio.Scanner, transform gdal.CoordinateTransform) (VectorLayer, error) {
+func getRiverCenterline(sc *bufio.Scanner, transform gdal.CoordinateTransform) (VectorFeature, error) {
 	riverReach := strings.Split(rightofEquals(sc.Text()), ",")
-	layer := VectorLayer{FeatureName: fmt.Sprintf("%s, %s", strings.TrimSpace(riverReach[0]), strings.TrimSpace(riverReach[1]))}
+	feature := VectorFeature{FeatureName: fmt.Sprintf("%s, %s", strings.TrimSpace(riverReach[0]), strings.TrimSpace(riverReach[1]))}
 
 	xyPairs, err := getDataPairsfromTextBlock("Reach XY=", sc, 64, 16)
 	if err != nil {
-		return layer, errors.Wrap(err, 0)
+		return feature, errors.Wrap(err, 0)
 	}
 
 	xyLineString := gdal.Create(gdal.GT_LineString)
@@ -263,58 +263,58 @@ func getRiverCenterline(sc *bufio.Scanner, transform gdal.CoordinateTransform) (
 
 	wkb, err := multiLineString.ToWKB()
 	if err != nil {
-		return layer, errors.Wrap(err, 0)
+		return feature, errors.Wrap(err, 0)
 	}
-	layer.Geometry = wkb
-	return layer, nil
+	feature.Geometry = wkb
+	return feature, nil
 }
 
-func getXSBanks(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReachName string) (VectorLayer, []VectorLayer, error) {
-	bankLayers := []VectorLayer{}
+func getXSBanks(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReachName string) (VectorFeature, []VectorFeature, error) {
+	bankLayer := []VectorFeature{}
 
-	xsLayer, xyPairs, startingStation, err := getXS(sc, transform, riverReachName)
+	xsFeature, xyPairs, startingStation, err := getXS(sc, transform, riverReachName)
 	if err != nil {
-		return xsLayer, bankLayers, errors.Wrap(err, 0)
+		return xsFeature, bankLayer, errors.Wrap(err, 0)
 	}
 
-	if xsLayer.Fields["CutLineProfileMatch"].(bool) {
+	if xsFeature.Fields["CutLineProfileMatch"].(bool) {
 		for sc.Scan() {
 			line := sc.Text()
 			if strings.HasPrefix(line, "Bank Sta=") {
-				bankLayers, err = getBanks(line, transform, xsLayer, xyPairs, startingStation)
+				bankLayer, err = getBanks(line, transform, xsFeature, xyPairs, startingStation)
 				if err != nil {
-					return xsLayer, bankLayers, errors.Wrap(err, 0)
+					return xsFeature, bankLayer, errors.Wrap(err, 0)
 				}
 				break
 			}
 		}
 	}
 
-	return xsLayer, bankLayers, nil
+	return xsFeature, bankLayer, nil
 }
 
-func getXS(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReachName string) (VectorLayer, [][2]float64, float64, error) {
+func getXS(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReachName string) (VectorFeature, [][2]float64, float64, error) {
 	xyPairs := [][2]float64{}
-	layer := VectorLayer{Fields: map[string]interface{}{}}
-	layer.Fields["RiverReachName"] = riverReachName
-	layer.Fields["CutLineProfileMatch"] = false
+	feature := VectorFeature{Fields: map[string]interface{}{}}
+	feature.Fields["RiverReachName"] = riverReachName
+	feature.Fields["CutLineProfileMatch"] = false
 
 	compData := strings.Split(rightofEquals(sc.Text()), ",")
 
 	xsName, err := toNumeric(compData[1])
 	if err != nil {
-		return layer, xyPairs, 0.0, errors.Wrap(err, 0)
+		return feature, xyPairs, 0.0, errors.Wrap(err, 0)
 	}
-	layer.FeatureName = xsName
+	feature.FeatureName = xsName
 
 	xyPairs, err = getDataPairsfromTextBlock("XS GIS Cut Line", sc, 64, 16)
 	if err != nil {
-		return layer, xyPairs, 0.0, errors.Wrap(err, 0)
+		return feature, xyPairs, 0.0, errors.Wrap(err, 0)
 	}
 
 	if len(xyPairs) < 2 {
 		err = errors.New("the cross-section cutline could not be extracted, check that the geometry file contains cutlines")
-		return layer, xyPairs, 0.0, errors.Wrap(err, 0)
+		return feature, xyPairs, 0.0, errors.Wrap(err, 0)
 	}
 
 	xyzLineString := gdal.Create(gdal.GT_LineString25D)
@@ -325,7 +325,7 @@ func getXS(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReachName
 
 	mzPairs, err := getDataPairsfromTextBlock("#Sta/Elev", sc, 80, 8)
 	if err != nil {
-		return layer, xyPairs, mzPairs[0][0], errors.Wrap(err, 0)
+		return feature, xyPairs, mzPairs[0][0], errors.Wrap(err, 0)
 	}
 
 	if len(mzPairs) >= 2 {
@@ -336,7 +336,7 @@ func getXS(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReachName
 			for _, point := range xyzPoints {
 				xyzLineString.AddPoint(point.x, point.y, point.z)
 			}
-			layer.Fields["CutLineProfileMatch"] = true
+			feature.Fields["CutLineProfileMatch"] = true
 		}
 	}
 
@@ -347,23 +347,23 @@ func getXS(sc *bufio.Scanner, transform gdal.CoordinateTransform, riverReachName
 	multiLineString := yxzLineString.ForceToMultiLineString()
 	wkb, err := multiLineString.ToWKB()
 	if err != nil {
-		return layer, xyPairs, mzPairs[0][0], errors.Wrap(err, 0)
+		return feature, xyPairs, mzPairs[0][0], errors.Wrap(err, 0)
 	}
-	layer.Geometry = wkb
-	return layer, xyPairs, mzPairs[0][0], nil
+	feature.Geometry = wkb
+	return feature, xyPairs, mzPairs[0][0], nil
 }
 
-func getBanks(line string, transform gdal.CoordinateTransform, xsLayer VectorLayer, xyPairs [][2]float64, startingStation float64) ([]VectorLayer, error) {
-	layers := []VectorLayer{}
+func getBanks(line string, transform gdal.CoordinateTransform, xsFeature VectorFeature, xyPairs [][2]float64, startingStation float64) ([]VectorFeature, error) {
+	layer := []VectorFeature{}
 
 	bankStations := strings.Split(rightofEquals(line), ",")
 	for _, s := range bankStations {
-		layer := VectorLayer{FeatureName: strings.TrimSpace(s), Fields: map[string]interface{}{}}
-		layer.Fields["RiverReachName"] = xsLayer.Fields["RiverReachName"]
-		layer.Fields["xsName"] = xsLayer.FeatureName
+		feature := VectorFeature{FeatureName: strings.TrimSpace(s), Fields: map[string]interface{}{}}
+		feature.Fields["RiverReachName"] = xsFeature.Fields["RiverReachName"]
+		feature.Fields["xsName"] = xsFeature.FeatureName
 		bankStation, err := parseFloat(s, 64)
 		if err != nil {
-			return layers, errors.Wrap(err, 0)
+			return layer, errors.Wrap(err, 0)
 		}
 		bankXY := interpXY(xyPairs, bankStation-startingStation)
 		xyPoint := gdal.Create(gdal.GT_Point)
@@ -374,20 +374,25 @@ func getBanks(line string, transform gdal.CoordinateTransform, xsLayer VectorLay
 		multiPoint := yxPoint.ForceToMultiPoint()
 		wkb, err := multiPoint.ToWKB()
 		if err != nil {
-			return layers, errors.Wrap(err, 0)
+			return layer, errors.Wrap(err, 0)
 		}
-		layer.Geometry = wkb
-		layers = append(layers, layer)
+		feature.Geometry = wkb
+		layer = append(layer, feature)
 	}
-	return layers, nil
+	return layer, nil
 }
 
-func getStorageArea(sc *bufio.Scanner, transform gdal.CoordinateTransform) (VectorLayer, error) {
-	layer := VectorLayer{FeatureName: strings.TrimSpace(strings.Split(rightofEquals(sc.Text()), ",")[0])}
+func getArea(sc *bufio.Scanner, transform gdal.CoordinateTransform) (VectorFeature, string, error) {
+	feature := VectorFeature{FeatureName: strings.TrimSpace(strings.Split(rightofEquals(sc.Text()), ",")[0])}
 
 	xyPairs, err := getDataPairsfromTextBlock("Storage Area Surface Line=", sc, 32, 16)
 	if err != nil {
-		return layer, errors.Wrap(err, 0)
+		return feature, "", errors.Wrap(err, 0)
+	}
+
+	is2D, err := getAreaType(sc)
+	if err != nil {
+		return feature, "", errors.Wrap(err, 0)
 	}
 
 	xyLinearRing := gdal.Create(gdal.GT_LinearRing)
@@ -404,25 +409,42 @@ func getStorageArea(sc *bufio.Scanner, transform gdal.CoordinateTransform) (Vect
 	yxMultiPolygon := yxPolygon.ForceToMultiPolygon()
 	wkb, err := yxMultiPolygon.ToWKB()
 	if err != nil {
-		return layer, errors.Wrap(err, 0)
+		return feature, is2D, errors.Wrap(err, 0)
 	}
-	layer.Geometry = wkb
-	return layer, nil
+	feature.Geometry = wkb
+	return feature, is2D, nil
 }
 
-// Extract name and geometry from BreakLine text block and return as Vector Layer
-func getBreakLine(sc *bufio.Scanner, transform gdal.CoordinateTransform) (VectorLayer, error) {
+func getAreaType(sc *bufio.Scanner) (string, error) {
+	is2D := ""
+
+	for sc.Scan() {
+		line := sc.Text()
+		if strings.HasPrefix(line, "Storage Area Is2D="){
+			is2D = rightofEquals(line)
+			if is2D != "0" && is2D != "-1" {
+				return "", errors.New("Cannot determine if area is storage area or 2D area.")
+			}	
+			return is2D, nil
+		}
+	}
+	
+	return "", errors.New("Failed to parse area type.")
+}
+
+// Extract name and geometry from BreakLine text block and return as Vector Feature
+func getBreakLine(sc *bufio.Scanner, transform gdal.CoordinateTransform) (VectorFeature, error) {
 	blName := rightofEquals(sc.Text())
-	layer := VectorLayer{FeatureName: blName}
+	feature := VectorFeature{FeatureName: blName}
 
 	xyPairs, err := getDataPairsfromTextBlock("BreakLine Polyline=", sc, 64, 16)
 	if err != nil {
-		return layer, errors.Wrap(err, 0)
+		return feature, errors.Wrap(err, 0)
 	}
 
 	// If less than 2 xyPairs, it is not a valid line.
 	if len(xyPairs) < 2 {
-		return layer, errors.New("Invalid Line Geometry")
+		return feature, errors.New("Invalid Line Geometry")
 	}
 
 	xyLineString := gdal.Create(gdal.GT_LineString)
@@ -438,25 +460,35 @@ func getBreakLine(sc *bufio.Scanner, transform gdal.CoordinateTransform) (Vector
 
 	wkb, err := multiLineString.ToWKB()
 	if err != nil {
-		return layer, errors.Wrap(err, 0)
+		return feature, errors.Wrap(err, 0)
 	}
-	layer.Geometry = wkb
-	return layer, nil
+	feature.Geometry = wkb
+	return feature, nil
 }
 
-// Extract name and geometry from Boundary Condition text block and return as Vector Layer
-func getBCLine(sc *bufio.Scanner, transform gdal.CoordinateTransform) (VectorLayer, error) {
+// Extract name and geometry from Boundary Condition text block and return as Vector Feature
+func getBCLine(sc *bufio.Scanner, transform gdal.CoordinateTransform) (VectorFeature, error) {
 	bcName := rightofEquals(sc.Text())
-	layer := VectorLayer{FeatureName: bcName}
+
+	feature := VectorFeature{
+		FeatureName: bcName,
+		Fields: map[string]interface{}{},
+	}
+
+	bcArea, err := getBCArea(sc)
+	if err != nil {
+		return feature, errors.Wrap(err, 0)
+	}
+	feature.Fields["Area"] = bcArea
 
 	xyPairs, err := getDataPairsfromTextBlock("BC Line Arc=", sc, 64, 16)
 	if err != nil {
-		return layer, errors.Wrap(err, 0)
+		return feature, errors.Wrap(err, 0)
 	}
 
 	// If less than 2 xyPairs, it is not a valid line.
 	if len(xyPairs) < 2 {
-		return layer, errors.New("Invalid Line Geometry")
+		return feature, errors.New("Invalid Line Geometry")
 	}
 
 	xyLineString := gdal.Create(gdal.GT_LineString)
@@ -472,24 +504,41 @@ func getBCLine(sc *bufio.Scanner, transform gdal.CoordinateTransform) (VectorLay
 
 	wkb, err := multiLineString.ToWKB()
 	if err != nil {
-		return layer, errors.Wrap(err, 0)
+		return feature, errors.Wrap(err, 0)
 	}
-	layer.Geometry = wkb
-	return layer, nil
+	feature.Geometry = wkb
+	return feature, nil
 }
 
-// Extract name and geometry from Connection text block and return as Vector Layer
-func getConnectionLine(sc *bufio.Scanner, transform gdal.CoordinateTransform) (VectorLayer, error) {
-	layer := VectorLayer{FeatureName: strings.TrimSpace(strings.Split(rightofEquals(sc.Text()), ",")[0])}
+// Get Storage / 2D Area of a BC Line
+func getBCArea(sc *bufio.Scanner) (string, error) {
+	bcArea := ""
+	for sc.Scan() {
+		line := sc.Text()
+		if strings.HasPrefix(line, "BC Line Storage Area="){
+			bcArea = rightofEquals(line)
+			return bcArea, nil
+		}
+	}
+	return "", errors.New("Failed to parse BC Line Storage Area.")
+}
+
+
+// Extract name and geometry from Connection text block and return as Vector Feature
+func getConnectionLine(sc *bufio.Scanner, transform gdal.CoordinateTransform) (VectorFeature, error) {
+	feature := VectorFeature{
+		FeatureName: strings.TrimSpace(strings.Split(rightofEquals(sc.Text()), ",")[0]),
+		Fields: map[string]interface{}{},
+	}
 
 	xyPairs, err := getDataPairsfromTextBlock("Connection Line=", sc, 64, 16)
 	if err != nil {
-		return layer, errors.Wrap(err, 0)
+		return feature, errors.Wrap(err, 0)
 	}
 
 	// If less than 2 xyPairs, it is not a valid line.
 	if len(xyPairs) < 2 {
-		return layer, errors.New("Invalid Line Geometry")
+		return feature, errors.New("Invalid Line Geometry")
 	}
 
 	xyLineString := gdal.Create(gdal.GT_LineString)
@@ -505,11 +554,39 @@ func getConnectionLine(sc *bufio.Scanner, transform gdal.CoordinateTransform) (V
 
 	wkb, err := multiLineString.ToWKB()
 	if err != nil {
-		return layer, errors.Wrap(err, 0)
+		return feature, errors.Wrap(err, 0)
 	}
-	layer.Geometry = wkb
-	return layer, nil
+	feature.Geometry = wkb
+
+	connUpArea, connDnArea, err := getConnArea(sc)
+	if err != nil {
+		return feature, errors.Wrap(err, 0)
+	}
+	feature.Fields["Up Area"] = connUpArea
+	feature.Fields["Dn Area"] = connDnArea
+
+	return feature, nil
 }
+
+// Extract Upstream and DownStream Areas of a Connection
+func getConnArea(sc *bufio.Scanner) (string, string, error) {
+	connUpArea := ""
+	connDnArea := ""
+
+	for sc.Scan() {
+		line := sc.Text()
+		if strings.HasPrefix(line, "Connection Up SA="){
+			connUpArea = rightofEquals(line)
+		} else if strings.HasPrefix(line, "Connection Dn SA="){
+			connDnArea = rightofEquals(line)
+		}
+		if connUpArea != "" && connDnArea != "" {
+			return connUpArea, connDnArea, nil
+		}
+	}
+	return "", "", errors.New("Failed to parse Connection Up/Dn Areas.")
+}
+
 
 // GetGeospatialData ...
 func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string, sourceCRS string, destinationCRS int) error {
@@ -535,68 +612,71 @@ func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string,
 
 		switch {
 		case strings.HasPrefix(line, "River Reach="):
-			riverLayer, err := getRiverCenterline(sc, transform)
+			riverFeature, err := getRiverCenterline(sc, transform)
 			if err != nil {
 				return errors.Wrap(err, 0) 
 			}
-			f.Rivers = append(f.Rivers, riverLayer)
-			riverReachName = riverLayer.FeatureName
+			f.Rivers = append(f.Rivers, riverFeature)
+			riverReachName = riverFeature.FeatureName
 
 		case strings.HasPrefix(line, "Storage Area="):
-			storageAreaLayer, err := getStorageArea(sc, transform)
+			storageAreaFeature, aType, err := getArea(sc, transform)
 			if err != nil {
 				return errors.Wrap(err, 0) 
 			}
-			f.StorageAreas = append(f.StorageAreas, storageAreaLayer)
-
+			if aType == "0" {
+				f.StorageAreas = append(f.StorageAreas, storageAreaFeature)
+			} else if aType == "-1" {
+				f.TwoDAreas = append(f.TwoDAreas, storageAreaFeature)
+			}
 		case strings.HasPrefix(line, "Type RM Length L Ch R = 1"):
-			xsLayer, bankLayers, err := getXSBanks(sc, transform, riverReachName)
+			xsFeature, bankLayer, err := getXSBanks(sc, transform, riverReachName)
 			if err != nil {
 				return errors.Wrap(err, 0) 
 			}
-			f.XS = append(f.XS, xsLayer)
-			f.Banks = append(f.Banks, bankLayers...)
+			f.XS = append(f.XS, xsFeature)
+			f.Banks = append(f.Banks, bankLayer...)
 
 		case strings.HasPrefix(line, "BreakLine Name="):
-			blLayer, err := getBreakLine(sc, transform)
+			blFeature, err := getBreakLine(sc, transform)
 			switch {
 			case err != nil:
 				switch {
 				case err.Error() == "Invalid Line Geometry":
-					log.Println("Skipped", blLayer.FeatureName, err.Error())
+					log.Println("Skipped", blFeature.FeatureName,err.Error(), "Geom File:", filepath.Ext(geomFilePath))
 				default:
 					return errors.Wrap(err, 0)
 				}
 			default:
-				f.BreakLines = append(f.BreakLines, blLayer)
+				f.BreakLines = append(f.BreakLines, blFeature)
 			}
 
 		case strings.HasPrefix(line, "BC Line Name="):
-			bcLayer, err := getBCLine(sc, transform)
+			bcFeature, err := getBCLine(sc, transform)
 			switch {
 			case err != nil:
 				switch {
 				case err.Error() == "Invalid Line Geometry":
-					log.Println("Skipped", bcLayer.FeatureName, err.Error())
+					log.Println("Skipped", bcFeature.FeatureName ,err.Error(), "Geom File:", filepath.Ext(geomFilePath))
 				default:
 					return errors.Wrap(err, 0)
 				}
 			default:
-				f.BCLines = append(f.BCLines, bcLayer)
+				f.BCLines = append(f.BCLines, bcFeature)
 			}
 
 		case strings.HasPrefix(line, "Connection="):
-			connLayer, err := getConnectionLine(sc, transform)
+			connFeature, err := getConnectionLine(sc, transform)
 			switch {
 			case err != nil:
 				switch {
 				case err.Error() == "Invalid Line Geometry":
-					log.Println("Skipped", connLayer.FeatureName, err.Error())
+					log.Println("Skipped", connFeature.FeatureName ,err.Error(), "Geom File:", filepath.Ext(geomFilePath))
 				default:
 					return errors.Wrap(err, 0)
 				}
 			default:
-				f.Connections = append(f.Connections, connLayer)
+				f.Connections = append(f.Connections, connFeature)
 			}
 
 		}
