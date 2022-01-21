@@ -63,7 +63,7 @@ func upsertModel(tx *sqlx.Tx, rm *ras.RasModel, definitionFile string, collectio
 	return modelID, nil
 }
 
-func upsertRiver(tx *sqlx.Tx, river ras.VectorLayer, geometryFileID int) (riverID int, err error) {
+func upsertRiver(tx *sqlx.Tx, river ras.VectorFeature, geometryFileID int) (riverID int, err error) {
 	riverReachName := river.FeatureName
 	riverReach := strings.Split(riverReachName, ",")
 	riverName := strings.TrimSpace(riverReach[0])

@@ -11,8 +11,8 @@ import (
 // Store HEC-RAS SA/2D Area Connections
 type connection struct {
 	Description string      `json:"Description"`
-	UpSA        string      `json:"Up SA"`
-	DnSA        string      `json:"Dn SA"`
+	UpSA        string      `json:"Up Area"`
+	DnSA        string      `json:"Dn Area"`
 	WeirWidth   float64     `json:"Weir Width"`
 	WeirElev    maxMinPairs `json:"Weir Elevations"`
 	NumGates    int         `json:"Num Gates"`
