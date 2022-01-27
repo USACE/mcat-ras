@@ -10,16 +10,15 @@ import (
 )
 
 type storageArea struct {
-	NumBCLines	int			`json:"Num BC Lines"`
-	BCLines     []string 	`json:"BC Lines"`
+	NumBCLines int      `json:"Num BC Lines"`
+	BCLines    []string `json:"BC Lines"`
 }
 
 type twoDArea struct {
-	NumCells	int         `json:"Num Mesh Cells"`
-	NumBCLines	int			`json:"Num BC Lines"`
-	BCLines     []string	`json:"BC Lines"`
+	NumCells   int      `json:"Num Mesh Cells"`
+	NumBCLines int      `json:"Num BC Lines"`
+	BCLines    []string `json:"BC Lines"`
 }
-
 
 // Extract Storage and 2D Areas Data
 func getAreasData(rm *RasModel, fn string, i int) (string, interface{}, error) {
@@ -29,14 +28,15 @@ func getAreasData(rm *RasModel, fn string, i int) (string, interface{}, error) {
 
 	f, err := rm.FileStore.GetObject(fn)
 	if err != nil {
-		return "", nil, errors.Wrap(err, 0) 
+		return "", nil, errors.Wrap(err, 0)
 	}
 	defer f.Close()
 
 	aSc := bufio.NewScanner(f)
 
 	ai := 0
-	areaLoop: for aSc.Scan() {
+areaLoop:
+	for aSc.Scan() {
 		ai++
 		if ai == i {
 			lineData := strings.Split(rightofEquals(aSc.Text()), ",")
@@ -49,13 +49,13 @@ func getAreasData(rm *RasModel, fn string, i int) (string, interface{}, error) {
 			case strings.HasPrefix(line, "Storage Area Is2D="):
 				is2D = rightofEquals(line)
 				if is2D != "0" && is2D != "-1" {
-					return "", nil, errors.New(fmt.Sprintf("Cannot determine if area is storage area or 2D area at line '%v' of %v", line, fn)) 
+					return "", nil, errors.New(fmt.Sprintf("Cannot determine if area is storage area or 2D area at line '%v' of %v", line, fn))
 				}
 
 			case strings.HasPrefix(line, "Storage Area 2D Points="):
 				numCells, err = strconv.Atoi(rightofEquals(line))
 				if err != nil {
-					return "", nil, errors.Wrap(err, 0) 
+					return "", nil, errors.Wrap(err, 0)
 				}
 
 			case strings.HasPrefix(line, "2D Face Area "):
@@ -68,8 +68,7 @@ func getAreasData(rm *RasModel, fn string, i int) (string, interface{}, error) {
 		}
 	}
 	if is2D == "0" {
-		area := storageArea{
-		}
+		area := storageArea{}
 		return name, area, nil
 	} else {
 		area := twoDArea{
@@ -87,7 +86,7 @@ func getBCLineData(rm *RasModel, fn string, i int) (string, string, error) {
 
 	f, err := rm.FileStore.GetObject(fn)
 	if err != nil {
-		return "", bc, errors.Wrap(err, 0) 
+		return "", bc, errors.Wrap(err, 0)
 	}
 	defer f.Close()
 
@@ -113,7 +112,7 @@ func getBCLineData(rm *RasModel, fn string, i int) (string, string, error) {
 			case strings.HasPrefix(line, "BC Line Name="):
 				// returning error here because associated area is a must field
 				return "", bc, errors.New(fmt.Sprintf("Failed to parse BC Line at geom file line number %v of %v", i, fn))
-				
+
 			}
 		}
 	}

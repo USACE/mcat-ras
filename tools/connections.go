@@ -28,7 +28,7 @@ func getConnectionsData(rm *RasModel, fn string, i int) (string, connection, err
 
 	f, err := rm.FileStore.GetObject(fn)
 	if err != nil {
-		return name, connection, errors.Wrap(err, 0) 
+		return name, connection, errors.Wrap(err, 0)
 	}
 	defer f.Close()
 
@@ -43,11 +43,11 @@ func getConnectionsData(rm *RasModel, fn string, i int) (string, connection, err
 		} else if ci > i {
 			line := cSc.Text()
 			switch {
-				
+
 			case strings.HasPrefix(line, "Connection Desc="):
 				description, err := getDescriptionConnections(cSc, "Connection Line=")
 				if err != nil {
-					return name, connection, errors.Wrap(err, 0) 
+					return name, connection, errors.Wrap(err, 0)
 				}
 				connection.Description += description
 
@@ -60,20 +60,20 @@ func getConnectionsData(rm *RasModel, fn string, i int) (string, connection, err
 			case strings.HasPrefix(line, "Conn Weir WD="):
 				weirWidth, err := strconv.ParseFloat(rightofEquals(line), 64)
 				if err != nil {
-					return name, connection, errors.Wrap(err, 0) 
+					return name, connection, errors.Wrap(err, 0)
 				}
 				connection.WeirWidth = weirWidth
 
 			case strings.HasPrefix(line, "Conn Weir SE="):
 				nElev, err := strconv.Atoi(rightofEquals(line))
 				if err != nil {
-					return name, connection, errors.Wrap(err, 0) 
+					return name, connection, errors.Wrap(err, 0)
 				}
 				nLines := numberofLines(nElev*2, 80, 8)
 
 				elev, _, err := getMaxMinElev(cSc, 0, nLines, 0, 80, 8, 2)
 				if err != nil {
-					return name, connection, errors.Wrap(err, 0) 
+					return name, connection, errors.Wrap(err, 0)
 				}
 				connection.WeirElev = elev
 
@@ -81,7 +81,7 @@ func getConnectionsData(rm *RasModel, fn string, i int) (string, connection, err
 				cSc.Scan()
 				gate, err := getGates(cSc.Text())
 				if err != nil {
-					return name, connection, errors.Wrap(err, 0) 
+					return name, connection, errors.Wrap(err, 0)
 				}
 				connection.Gates = append(connection.Gates, gate)
 				connection.NumGates++
@@ -89,14 +89,14 @@ func getConnectionsData(rm *RasModel, fn string, i int) (string, connection, err
 			case strings.HasPrefix(line, "Connection Culv="):
 				conduit, err := getConduits(line, false)
 				if err != nil {
-					return name, connection, errors.Wrap(err, 0) 
+					return name, connection, errors.Wrap(err, 0)
 				}
 				connection.Conduits = append(connection.Conduits, conduit)
 				connection.NumConduits++
 
 			case strings.HasPrefix(line, "Conn Outlet Rating Curve="):
 				return name, connection, nil
-				
+
 			case strings.HasPrefix(line, "Connection="):
 				// guard to make sure new Connection don't overwrite previous values
 				// return with whatever data is available

@@ -79,7 +79,7 @@ func getDescriptionConnections(sc *bufio.Scanner, endLine string) (string, error
 		}
 	}
 	return description, nil
-}				
+}
 
 func stringInSlice(val string, s []string) bool {
 	for i := range s {

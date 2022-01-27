@@ -31,7 +31,7 @@ type Features struct {
 	HydraulicStructures []VectorFeature
 	Connections         []VectorFeature
 	BCLines             []VectorFeature
-	BreakLines          []VectorFeature	
+	BreakLines          []VectorFeature
 }
 
 // VectorFeature ...
@@ -47,8 +47,7 @@ type xyzPoint struct {
 	z float64
 }
 
-
-var unitConsistencyGroups [][]string = [][]string{{"english units", "us survey foot", "foot_us", "foot us", "us foot"}, {"si units","metre", "meter"}}
+var unitConsistencyGroups [][]string = [][]string{{"english units", "us survey foot", "foot_us", "foot us", "us foot"}, {"si units", "metre", "meter"}}
 
 // checkUnitConsistency checks that the unit system used by the model and its coordinate reference system are the same
 func checkUnitConsistency(modelUnits string, sourceCRS string) error {
@@ -58,8 +57,8 @@ func checkUnitConsistency(modelUnits string, sourceCRS string) error {
 		for _, unitsSet := range unitConsistencyGroups {
 			if stringInSlice(strings.ToLower(modelUnits), unitsSet) && stringInSlice(strings.ToLower(crsUnits), unitsSet) {
 				return nil
+			}
 		}
-	}
 		return errors.New("The unit system of the model and coordinate reference system are inconsistent")
 	}
 	return errors.New("Unable to check unit consistency, could not identify the coordinate reference system's units")
@@ -420,15 +419,15 @@ func getAreaType(sc *bufio.Scanner) (string, error) {
 
 	for sc.Scan() {
 		line := sc.Text()
-		if strings.HasPrefix(line, "Storage Area Is2D="){
+		if strings.HasPrefix(line, "Storage Area Is2D=") {
 			is2D = rightofEquals(line)
 			if is2D != "0" && is2D != "-1" {
 				return "", errors.New("Cannot determine if area is storage area or 2D area.")
-			}	
+			}
 			return is2D, nil
 		}
 	}
-	
+
 	return "", errors.New("Failed to parse area type.")
 }
 
@@ -472,7 +471,7 @@ func getBCLine(sc *bufio.Scanner, transform gdal.CoordinateTransform) (VectorFea
 
 	feature := VectorFeature{
 		FeatureName: bcName,
-		Fields: map[string]interface{}{},
+		Fields:      map[string]interface{}{},
 	}
 
 	bcArea, err := getBCArea(sc)
@@ -515,7 +514,7 @@ func getBCArea(sc *bufio.Scanner) (string, error) {
 	bcArea := ""
 	for sc.Scan() {
 		line := sc.Text()
-		if strings.HasPrefix(line, "BC Line Storage Area="){
+		if strings.HasPrefix(line, "BC Line Storage Area=") {
 			bcArea = rightofEquals(line)
 			return bcArea, nil
 		}
@@ -523,12 +522,11 @@ func getBCArea(sc *bufio.Scanner) (string, error) {
 	return "", errors.New("Failed to parse BC Line Storage Area.")
 }
 
-
 // Extract name and geometry from Connection text block and return as Vector Feature
 func getConnectionLine(sc *bufio.Scanner, transform gdal.CoordinateTransform) (VectorFeature, error) {
 	feature := VectorFeature{
 		FeatureName: strings.TrimSpace(strings.Split(rightofEquals(sc.Text()), ",")[0]),
-		Fields: map[string]interface{}{},
+		Fields:      map[string]interface{}{},
 	}
 
 	xyPairs, err := getDataPairsfromTextBlock("Connection Line=", sc, 64, 16)
@@ -575,9 +573,9 @@ func getConnArea(sc *bufio.Scanner) (string, string, error) {
 
 	for sc.Scan() {
 		line := sc.Text()
-		if strings.HasPrefix(line, "Connection Up SA="){
+		if strings.HasPrefix(line, "Connection Up SA=") {
 			connUpArea = rightofEquals(line)
-		} else if strings.HasPrefix(line, "Connection Dn SA="){
+		} else if strings.HasPrefix(line, "Connection Dn SA=") {
 			connDnArea = rightofEquals(line)
 		}
 		if connUpArea != "" && connDnArea != "" {
@@ -587,7 +585,6 @@ func getConnArea(sc *bufio.Scanner) (string, string, error) {
 	return "", "", errors.New("Failed to parse Connection Up/Dn Areas.")
 }
 
-
 // GetGeospatialData ...
 func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string, sourceCRS string, destinationCRS int) error {
 	geomFileName := filepath.Base(geomFilePath)
@@ -596,7 +593,7 @@ func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string,
 
 	file, err := fs.GetObject(geomFilePath)
 	if err != nil {
-		return errors.Wrap(err, 0) 
+		return errors.Wrap(err, 0)
 	}
 	defer file.Close()
 
@@ -604,7 +601,7 @@ func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string,
 
 	transform, err := getTransform(sourceCRS, destinationCRS)
 	if err != nil {
-		return errors.Wrap(err, 0) 
+		return errors.Wrap(err, 0)
 	}
 
 	for sc.Scan() {
@@ -614,7 +611,7 @@ func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string,
 		case strings.HasPrefix(line, "River Reach="):
 			riverFeature, err := getRiverCenterline(sc, transform)
 			if err != nil {
-				return errors.Wrap(err, 0) 
+				return errors.Wrap(err, 0)
 			}
 			f.Rivers = append(f.Rivers, riverFeature)
 			riverReachName = riverFeature.FeatureName
@@ -622,7 +619,7 @@ func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string,
 		case strings.HasPrefix(line, "Storage Area="):
 			storageAreaFeature, aType, err := getArea(sc, transform)
 			if err != nil {
-				return errors.Wrap(err, 0) 
+				return errors.Wrap(err, 0)
 			}
 			if aType == "0" {
 				f.StorageAreas = append(f.StorageAreas, storageAreaFeature)
@@ -632,7 +629,7 @@ func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string,
 		case strings.HasPrefix(line, "Type RM Length L Ch R = 1"):
 			xsFeature, bankLayer, err := getXSBanks(sc, transform, riverReachName)
 			if err != nil {
-				return errors.Wrap(err, 0) 
+				return errors.Wrap(err, 0)
 			}
 			f.XS = append(f.XS, xsFeature)
 			f.Banks = append(f.Banks, bankLayer...)
@@ -643,7 +640,7 @@ func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string,
 			case err != nil:
 				switch {
 				case err.Error() == "Invalid Line Geometry":
-					log.Println("Skipped", blFeature.FeatureName,err.Error(), "Geom File:", filepath.Ext(geomFilePath))
+					log.Println("Skipped", blFeature.FeatureName, err.Error(), "Geom File:", filepath.Ext(geomFilePath))
 				default:
 					return errors.Wrap(err, 0)
 				}
@@ -657,7 +654,7 @@ func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string,
 			case err != nil:
 				switch {
 				case err.Error() == "Invalid Line Geometry":
-					log.Println("Skipped", bcFeature.FeatureName ,err.Error(), "Geom File:", filepath.Ext(geomFilePath))
+					log.Println("Skipped", bcFeature.FeatureName, err.Error(), "Geom File:", filepath.Ext(geomFilePath))
 				default:
 					return errors.Wrap(err, 0)
 				}
@@ -671,7 +668,7 @@ func GetGeospatialData(gd *GeoData, fs filestore.FileStore, geomFilePath string,
 			case err != nil:
 				switch {
 				case err.Error() == "Invalid Line Geometry":
-					log.Println("Skipped", connFeature.FeatureName ,err.Error(), "Geom File:", filepath.Ext(geomFilePath))
+					log.Println("Skipped", connFeature.FeatureName, err.Error(), "Geom File:", filepath.Ext(geomFilePath))
 				default:
 					return errors.Wrap(err, 0)
 				}
