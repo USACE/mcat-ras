@@ -22,9 +22,8 @@ type twoDArea struct {
 
 // Extract Storage and 2D Areas Data
 func getAreasData(rm *RasModel, fn string, i int) (string, interface{}, error) {
-	name := ""
-	is2D := ""
-	numCells := 0
+	var name, is2D string
+	var numCells int
 
 	f, err := rm.FileStore.GetObject(fn)
 	if err != nil {
@@ -33,8 +32,8 @@ func getAreasData(rm *RasModel, fn string, i int) (string, interface{}, error) {
 	defer f.Close()
 
 	aSc := bufio.NewScanner(f)
+	var ai int
 
-	ai := 0
 areaLoop:
 	for aSc.Scan() {
 		ai++
@@ -82,7 +81,7 @@ areaLoop:
 
 // Extract Boundary Condition Line Data
 func getBCLineData(rm *RasModel, fn string, i int) (string, string, error) {
-	bc := ""
+	var bc string
 
 	f, err := rm.FileStore.GetObject(fn)
 	if err != nil {
@@ -91,8 +90,8 @@ func getBCLineData(rm *RasModel, fn string, i int) (string, string, error) {
 	defer f.Close()
 
 	bcSc := bufio.NewScanner(f)
+	var bci int
 
-	bci := 0
 	for bcSc.Scan() {
 		bci++
 		if bci == i {

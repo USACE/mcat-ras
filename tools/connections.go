@@ -23,8 +23,8 @@ type connection struct {
 
 // Extract data from Connections
 func getConnectionsData(rm *RasModel, fn string, i int) (string, connection, error) {
-	name := ""
-	connection := connection{}
+	var name string
+	var connection connection
 
 	f, err := rm.FileStore.GetObject(fn)
 	if err != nil {
