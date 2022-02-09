@@ -35,7 +35,7 @@ type PrjFileContents struct {
 	Description     string   //`json:"Description"`
 } //
 
-func readFirstLine(fs filestore.FileStore, fn string) (string, error) {
+func ReadFirstLine(fs filestore.FileStore, fn string) (string, error) {
 	file, err := fs.GetObject(fn)
 	if err != nil {
 		fmt.Println("Couldnt open the file", fn)
@@ -62,7 +62,7 @@ func verifyPrjPath(key string, rm *RasModel) error {
 		return errors.Errorf("%s is not a .prj file", key)
 	}
 
-	firstLine, err := readFirstLine(rm.FileStore, key)
+	firstLine, err := ReadFirstLine(rm.FileStore, key)
 	if err != nil {
 		return errors.Wrap(err, 0)
 	}
