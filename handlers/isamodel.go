@@ -28,18 +28,23 @@ func IsAModel(fs *filestore.FileStore) echo.HandlerFunc {
 			return c.JSON(http.StatusBadRequest, "Missing query parameter: `definition_file`")
 		}
 
-		if filepath.Ext(definitionFile) != ".prj" {
-			return c.JSON(http.StatusOK, false)
-		}
-
-		firstLine, err := tools.ReadFirstLine(*fs, definitionFile)
-		if err != nil {
-			return c.JSON(http.StatusOK, false)
-		}
-		if !strings.Contains(firstLine, "Proj Title=") {
-			return c.JSON(http.StatusOK, false)
-		}
-
-		return c.JSON(http.StatusOK, true)
+		return c.JSON(http.StatusOK, isAModel(fs, definitionFile))
 	}
+}
+
+func isAModel(fs *filestore.FileStore, definitionFile string) bool {
+	if filepath.Ext(definitionFile) != ".prj" {
+		return false
+	}
+
+	firstLine, err := tools.ReadFirstLine(*fs, definitionFile)
+	if err != nil {
+		return false
+	}
+
+	if !strings.Contains(firstLine, "Proj Title=") {
+		return false
+	}
+
+	return true
 }

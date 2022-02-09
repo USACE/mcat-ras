@@ -1,13 +1,9 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 
-	ras "app/tools"
-
-	"github.com/USACE/filestore"
-	"github.com/go-errors/errors" // warning: replaces standard errors
+	"github.com/USACE/filestore" // warning: replaces standard errors
 	"github.com/labstack/echo/v4"
 )
 
@@ -29,12 +25,10 @@ func ModelType(fs *filestore.FileStore) echo.HandlerFunc {
 			return c.JSON(http.StatusBadRequest, "Missing query parameter: `definition_file`")
 		}
 
-		rm, err := ras.NewRasModel(definitionFile, *fs)
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, SimpleResponse{http.StatusInternalServerError, fmt.Sprintf("Go error encountered: %v", err.Error()), err.(*errors.Error).ErrorStack()})
+		if !isAModel(fs, definitionFile) {
+			return c.JSON(http.StatusBadRequest, definitionFile+" is not a valid RAS prj file.")
 		}
-		typ := rm.ModelType()
 
-		return c.JSON(http.StatusOK, typ)
+		return c.JSON(http.StatusOK, "RAS")
 	}
 }
