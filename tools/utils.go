@@ -62,6 +62,25 @@ func getDescription(sc *bufio.Scanner, idx int, endLine string) (string, int, er
 	return description, idx, nil
 }
 
+func getDescriptionConnections(sc *bufio.Scanner, endLine string) (string, error) {
+	description := rightofEquals(sc.Text())
+	nLines := 0
+	for sc.Scan() {
+		line := sc.Text()
+		if strings.HasPrefix(line, endLine) {
+			return description, nil
+		}
+		if line != "" {
+			if nLines > 0 {
+				description += "\n"
+			}
+			description += line
+			nLines++
+		}
+	}
+	return description, nil
+}
+
 func stringInSlice(val string, s []string) bool {
 	for i := range s {
 		if s[i] == val {

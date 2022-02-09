@@ -27,7 +27,9 @@ func main() {
 	// Swagger
 	// e.GET("/swagger/*", echoSwagger.WrapHandler)
 
-	// // ras endpoints
+	// ras endpoints
+	// these endpoints create a Ras Model struct from files
+	// and then apply receiver functions to the struct to answer desired question
 	e.GET("/isamodel", handlers.IsAModel(appConfig.FileStore))
 	e.GET("/modeltype", handlers.ModelType(appConfig.FileStore))
 	e.GET("/modelversion", handlers.ModelVersion(appConfig.FileStore))

@@ -194,7 +194,8 @@ func (rm *RasModel) Index() Model {
 	return mod
 }
 
-// IsGeospatial ...
+// Checks if a model is geospatial or not.
+// Versions less than 4.0 are not considered geospatial
 func (rm *RasModel) IsGeospatial() bool {
 	if rm.Metadata.Projection == "" {
 		fmt.Println(rm.Metadata.ProjFilePath, "| no valid coordinate reference system")
@@ -228,7 +229,7 @@ func (rm *RasModel) GeospatialData(destinationCRS int) (GeoData, error) {
 		sourceCRS := rm.Metadata.Projection
 
 		if err := checkUnitConsistency(modelUnits, sourceCRS); err != nil {
-			return gd, errors.Wrap(err, 0) 
+			return gd, errors.Wrap(err, 0)
 		}
 
 		gd.Features = make(map[string]Features)
@@ -236,13 +237,13 @@ func (rm *RasModel) GeospatialData(destinationCRS int) (GeoData, error) {
 
 		for _, g := range rm.Metadata.GeomFiles {
 			if err := GetGeospatialData(&gd, rm.FileStore, g.Path, sourceCRS, destinationCRS); err != nil {
-				return gd, errors.Wrap(err, 0) 
+				return gd, errors.Wrap(err, 0)
 			}
 		}
 		return gd, nil
 	}
 	err := errors.New("the model is not geospatial")
-	return gd, errors.Wrap(err, 0) 
+	return gd, errors.Wrap(err, 0)
 
 }
 
