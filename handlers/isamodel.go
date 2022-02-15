@@ -46,5 +46,16 @@ func isAModel(fs *filestore.FileStore, definitionFile string) bool {
 		return false
 	}
 
-	return true
+	files, err := modFiles(definitionFile, fs)
+	if err != nil {
+		return false
+	}
+
+	for _, f := range files {
+		if filepath.Ext(f)[0:2] == ".g" {
+			return true
+		}
+	}
+
+	return false
 }
