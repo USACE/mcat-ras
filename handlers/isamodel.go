@@ -46,7 +46,7 @@ func isAModel(fs *filestore.FileStore, definitionFile string) bool {
 		return false
 	}
 
-	files, err := modFiles(definitionFile, fs)
+	files, err := modFiles(definitionFile, *fs)
 	if err != nil {
 		return false
 	}
