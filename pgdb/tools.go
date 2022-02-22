@@ -75,9 +75,9 @@ func upsertRiver(tx *sqlx.Tx, river ras.VectorFeature, geometryFileID int) (rive
 	return riverID, nil
 }
 
-// Creates Ras Model object and get Collection ID. 
+// Creates Ras Model object and get Collection ID.
 // Calls upsertModel to add record to database.
-// Expects collection record already exist collection table.
+// Expects collection record already exist in collection table.
 func upsertModelInfo(definitionFile string, ac *config.APIConfig, db *sqlx.DB) error {
 	ctx := context.Background()
 	tx, err := db.BeginTxx(ctx, nil)
@@ -115,7 +115,7 @@ func upsertModelInfo(definitionFile string, ac *config.APIConfig, db *sqlx.DB) e
 	return nil
 }
 
-// Creates Ras Model object and get Model ID. 
+// Creates Ras Model object and get Model ID.
 // Calls receiver function GeospatialData create geometry features.
 // Add records to multiple tables.
 // Expects model record already exist in model table.
@@ -226,17 +226,64 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 				}
 			}
 
+			// Create Dynamic container to map bclines with areas
+			areasIDMap := make(map[string]int, (len(features.StorageAreas) + len(features.TwoDAreas)))
+
 			// Add all Storage Areas
 			for _, storageArea := range features.StorageAreas {
-				_, err = tx.Exec(upsertStorageAreasSQL, geometryFileID, storageArea.FeatureName, storageArea.Geometry)
+				var aID int
+				err = tx.Get(&aID, upsertAreasSQL, geometryFileID, storageArea.FeatureName, false, storageArea.Geometry)
 				if err != nil {
 					log.Println("Storage Areas", geometryFile.FileExt, "|", err)
 					tx.Rollback()
 					return errors.Wrap(err, 0)
 				}
+				areasIDMap[storageArea.FeatureName] = aID
+			}
+
+			// Add all 2D Areas
+			for _, twoDArea := range features.TwoDAreas {
+				var aID int
+				err = tx.Get(&aID, upsertAreasSQL, geometryFileID, twoDArea.FeatureName, true, twoDArea.Geometry)
+				if err != nil {
+					log.Println("TwoD Areas", geometryFile.FileExt, "|", err)
+					tx.Rollback()
+					return errors.Wrap(err, 0)
+				}
+				areasIDMap[twoDArea.FeatureName] = aID
+			}
+
+			// Add all connections
+			for _, conn := range features.Connections {
+				_, err = tx.Exec(upsertConnectionsSQL, geometryFileID, conn.FeatureName, conn.Fields["Up Area"], conn.Fields["Dn Area"], conn.Geometry)
+				if err != nil {
+					log.Println("Connections", geometryFile.FileExt, "|", err)
+					tx.Rollback()
+					return errors.Wrap(err, 0)
+				}
+			}
+
+			// Add all breakLines
+			for _, bl := range features.BreakLines {
+				_, err = tx.Exec(upsertBreaklinesSQL, geometryFileID, bl.FeatureName, bl.Geometry)
+				if err != nil {
+					log.Println("Breaklines", geometryFile.FileExt, "|", err)
+					tx.Rollback()
+					return errors.Wrap(err, 0)
+				}
+			}
+
+			// Add all bounbdary condition lines
+			for _, bcl := range features.BCLines {
+				areaID := areasIDMap[bcl.Fields["Area"].(string)]
+				_, err = tx.Exec(upsertBClinesSQL, areaID, bcl.FeatureName, bcl.Geometry)
+				if err != nil {
+					log.Println("BC Lines", geometryFile.FileExt, "|", err)
+					tx.Rollback()
+					return errors.Wrap(err, 0)
+				}
 			}
 		}
-		
 		err = tx.Commit()
 		if err != nil {
 			log.Println("Transaction Commit Error|", err)
