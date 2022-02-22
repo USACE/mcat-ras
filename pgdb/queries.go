@@ -103,18 +103,67 @@ var (
 			geom = ST_GeomFromWKB($3, 4326);
 	`
 
-	upsertStorageAreasSQL string = `
-		INSERT INTO models.ras_storage_areas (
+	upsertAreasSQL string = `
+		INSERT INTO models.ras_areas (
 			geometry_file_id, 
-			storage_area_name, 
+			area_name,
+			is2d,
 			geom
 			) 
-			VALUES ($1, $2, ST_GeomFromWKB($3, 4326))
-		ON CONFLICT (storage_area_id)
+			VALUES ($1, $2, $3, ST_GeomFromWKB($4, 4326))
+		ON CONFLICT (geometry_file_id, area_name)
 		DO UPDATE SET 
 			geometry_file_id = $1, 
-			storage_area_name = $2, 
-			geom = ST_GeomFromWKB($3, 4326);
+			area_name = $2,
+			is2d = $3,
+			geom = ST_GeomFromWKB($4, 4326)
+		RETURNING area_id;
+	`
+
+	upsertConnectionsSQL string = `
+		INSERT INTO models.ras_connections (
+			geometry_file_id, 
+			connection_name, 
+			up_area,
+			dn_area,
+			geom
+			) 
+			VALUES ($1, $2, $3, $4, ST_GeomFromWKB($5, 4326))
+		ON CONFLICT (geometry_file_id, connection_name)
+		DO UPDATE SET 
+			geometry_file_id = $1, 
+			connection_name = $2,
+			up_area = $3,
+			dn_area = $4,
+			geom = ST_GeomFromWKB($5, 4326);
+	`
+
+	upsertBreaklinesSQL string = `
+	INSERT INTO models.ras_breaklines (
+		geometry_file_id, 
+		breakline_name, 
+		geom
+		) 
+		VALUES ($1, $2, ST_GeomFromWKB($3, 4326))
+	ON CONFLICT (geometry_file_id, breakline_name)
+	DO UPDATE SET 
+		geometry_file_id = $1, 
+		breakline_name = $2,
+		geom = ST_GeomFromWKB($3, 4326);
+	`
+
+	upsertBClinesSQL string = `
+	INSERT INTO models.ras_bclines (
+		area_id, 
+		bcline_name, 
+		geom
+		) 
+		VALUES ($1, $2, ST_GeomFromWKB($3, 4326))
+	ON CONFLICT (area_id, bcline_name)
+	DO UPDATE SET 
+		area_id = $1, 
+		bcline_name = $2,
+		geom = ST_GeomFromWKB($3, 4326);
 	`
 
 	upsertGeometrySQL string = `

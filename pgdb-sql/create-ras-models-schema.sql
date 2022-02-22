@@ -106,39 +106,22 @@ CREATE INDEX IF NOT EXISTS ras_banks_geom_idx ON models.ras_banks USING GIST (ge
 
 
 /*---------------------------------------------------------------------------*/
--- Create models.ras_storage_areas table
+-- Create models.ras_areas table
 /*---------------------------------------------------------------------------*/
-CREATE TABLE IF NOT EXISTS models.ras_storage_areas(
-       storage_area_id SERIAL PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS models.ras_areas(
+       area_id SERIAL PRIMARY KEY,
        geometry_file_id INTEGER REFERENCES models.ras_geometry_files ON UPDATE CASCADE ON DELETE CASCADE,
-       storage_area_name TEXT NOT NULL,
+       area_name TEXT NOT NULL,
+       is2d BOOLEAN NOT NULL,
        geom GEOMETRY(MultiPolygon, 4326),
-       CONSTRAINT ras_storage_areas_geometry_file_id_name_uniq UNIQUE (geometry_file_id, storage_area_name)
+       CONSTRAINT ras_areas_geometry_file_id_name_uniq UNIQUE (geometry_file_id, area_name)
 );
 
 -- Create index on foreign key
-CREATE INDEX IF NOT EXISTS ras_storage_areas_geometry_file_id_idx ON models.ras_storage_areas (geometry_file_id);
+CREATE INDEX IF NOT EXISTS ras_areas_geometry_file_id_idx ON models.ras_areas (geometry_file_id);
 
 -- Create index on geometry
-CREATE INDEX IF NOT EXISTS ras_storage_areas_geom_idx ON models.ras_storage_areas USING GIST (geom);
-
-
-/*---------------------------------------------------------------------------*/
--- Create models.ras_two_d_areas table
-/*---------------------------------------------------------------------------*/
-CREATE TABLE IF NOT EXISTS models.ras_two_d_areas(
-       two_d_area_id SERIAL PRIMARY KEY,
-       geometry_file_id INTEGER REFERENCES models.ras_geometry_files ON UPDATE CASCADE ON DELETE CASCADE,
-       two_d_area_name TEXT NOT NULL,
-       geom GEOMETRY(MultiPolygon, 4326),
-       CONSTRAINT ras_two_d_areas_geometry_file_id_name_uniq UNIQUE (geometry_file_id, two_d_area_name)
-);
-
--- Create index on foreign key
-CREATE INDEX IF NOT EXISTS ras_two_d_areas_geometry_file_id_idx ON models.ras_two_d_areas (geometry_file_id);
-
--- Create index on geometry
-CREATE INDEX IF NOT EXISTS ras_two_d_areas_geom_idx ON models.ras_two_d_areas USING GIST (geom);
+CREATE INDEX IF NOT EXISTS ras_areas_geom_idx ON models.ras_areas USING GIST (geom);
 
 
 /*---------------------------------------------------------------------------*/
@@ -158,3 +141,59 @@ CREATE INDEX IF NOT EXISTS ras_hydraulic_structures_geometry_file_id_idx ON mode
 
 -- Create index on geometry
 CREATE INDEX IF NOT EXISTS ras_hydraulic_structure_geom_idx ON models.ras_hydraulic_structures USING GIST (geom);
+
+/*---------------------------------------------------------------------------*/
+-- Create models.ras_connections table
+/*---------------------------------------------------------------------------*/
+CREATE TABLE IF NOT EXISTS models.ras_connections(
+       connection_id SERIAL PRIMARY KEY,
+       geometry_file_id INTEGER REFERENCES models.ras_geometry_files ON UPDATE CASCADE ON DELETE CASCADE,
+       connection_name TEXT NOT NULL,
+       up_area TEXT NOT NULL,
+       dn_area TEXT NOT NULL,
+       geom GEOMETRY(MultiLineString, 4326),
+       CONSTRAINT ras_connections_geometry_file_id_name_uniq UNIQUE (geometry_file_id, connection_name)
+);
+
+-- Create index on foreign key
+CREATE INDEX IF NOT EXISTS ras_connections_geometry_file_id_idx ON models.ras_connections (geometry_file_id);
+
+-- Create index on geometry
+CREATE INDEX IF NOT EXISTS ras_connections_geom_idx ON models.ras_connections USING GIST (geom);
+
+
+/*---------------------------------------------------------------------------*/
+-- Create models.ras_bclines table
+/*---------------------------------------------------------------------------*/
+CREATE TABLE IF NOT EXISTS models.ras_bclines(
+       bcline_id SERIAL PRIMARY KEY,
+       area_id INTEGER REFERENCES models.ras_areas ON UPDATE CASCADE ON DELETE CASCADE,
+       bcline_name TEXT NOT NULL,
+       geom GEOMETRY(MultiLineString, 4326),
+       CONSTRAINT ras_bclines_file_id_name_uniq UNIQUE (area_id, bcline_name)
+);
+
+-- Create index on foreign key
+CREATE INDEX IF NOT EXISTS ras_bclines_areas_id_idx ON models.ras_bclines (area_id);
+
+-- Create index on geometry
+CREATE INDEX IF NOT EXISTS ras_bclines_geom_idx ON models.ras_bclines USING GIST (geom);
+
+
+
+/*---------------------------------------------------------------------------*/
+-- Create models.ras_breaklines table
+/*---------------------------------------------------------------------------*/
+CREATE TABLE IF NOT EXISTS models.ras_breaklines(
+       breakline_id SERIAL PRIMARY KEY,
+       geometry_file_id INTEGER REFERENCES models.ras_geometry_files ON UPDATE CASCADE ON DELETE CASCADE,
+       breakline_name TEXT NOT NULL,
+       geom GEOMETRY(MultiLineString, 4326),
+       CONSTRAINT ras_breaklines_geomfile_file_id_name_uniq UNIQUE (geometry_file_id, breakline_name)
+);
+
+-- Create index on foreign key
+CREATE INDEX IF NOT EXISTS ras_rivers_geometry_file_id_idx ON models.ras_breaklines (geometry_file_id);
+
+-- Create index on geometry
+CREATE INDEX IF NOT EXISTS ras_breaklines_geom_idx ON models.ras_breaklines USING GIST (geom);
