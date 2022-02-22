@@ -103,36 +103,20 @@ var (
 			geom = ST_GeomFromWKB($3, 4326);
 	`
 
-	upsertStorageAreasSQL string = `
+	upsertAreasSQL string = `
 		INSERT INTO models.ras_areas (
 			geometry_file_id, 
 			area_name,
 			is2d,
 			geom
 			) 
-			VALUES ($1, $2, FALSE, ST_GeomFromWKB($3, 4326))
+			VALUES ($1, $2, $3, ST_GeomFromWKB($4, 4326))
 		ON CONFLICT (geometry_file_id, area_name)
 		DO UPDATE SET 
 			geometry_file_id = $1, 
 			area_name = $2,
-			is2d = FALSE,
-			geom = ST_GeomFromWKB($3, 4326)
-		RETURNING area_id;
-	`
-	upsert2DAreasSQL string = `
-		INSERT INTO models.ras_areas (
-			geometry_file_id, 
-			area_name, 
-			is2d,
-			geom
-			) 
-			VALUES ($1, $2, TRUE, ST_GeomFromWKB($3, 4326))
-		ON CONFLICT (geometry_file_id, area_name)
-		DO UPDATE SET 
-			geometry_file_id = $1, 
-			area_name = $2, 
-			is2d = TRUE,
-			geom = ST_GeomFromWKB($3, 4326)
+			is2d = $3,
+			geom = ST_GeomFromWKB($4, 4326)
 		RETURNING area_id;
 	`
 

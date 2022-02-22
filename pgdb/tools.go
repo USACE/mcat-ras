@@ -232,7 +232,7 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 			// Add all Storage Areas
 			for _, storageArea := range features.StorageAreas {
 				var aID int
-				err = tx.Get(&aID, upsertStorageAreasSQL, geometryFileID, storageArea.FeatureName, storageArea.Geometry)
+				err = tx.Get(&aID, upsertAreasSQL, geometryFileID, storageArea.FeatureName, false, storageArea.Geometry)
 				if err != nil {
 					log.Println("Storage Areas", geometryFile.FileExt, "|", err)
 					tx.Rollback()
@@ -244,7 +244,7 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 			// Add all 2D Areas
 			for _, twoDArea := range features.TwoDAreas {
 				var aID int
-				err = tx.Get(&aID, upsert2DAreasSQL, geometryFileID, twoDArea.FeatureName, twoDArea.Geometry)
+				err = tx.Get(&aID, upsertAreasSQL, geometryFileID, twoDArea.FeatureName, true, twoDArea.Geometry)
 				if err != nil {
 					log.Println("TwoD Areas", geometryFile.FileExt, "|", err)
 					tx.Rollback()
