@@ -20,6 +20,7 @@ func main() {
 	e := echo.New()
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+	e.Use(middleware.Gzip())
 
 	// HealthCheck
 	e.GET("/ping", handlers.Ping(appConfig.FileStore))

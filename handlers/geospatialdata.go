@@ -52,7 +52,7 @@ func GeospatialData(ac *config.APIConfig) echo.HandlerFunc {
 }
 
 func geospatialData(definitionFile string, fs *filestore.FileStore, destinationCRS int) (tools.GeoData, error) {
-	gd := tools.GeoData{Features: make(map[string]tools.Features)}
+	gd := tools.GeoData{Features: make(map[string]tools.Features), Georeference: destinationCRS}
 
 	mfiles, err := modFiles(definitionFile, *fs)
 	if err != nil {
