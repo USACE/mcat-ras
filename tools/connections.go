@@ -9,7 +9,7 @@ import (
 )
 
 // Store HEC-RAS SA/2D Area Connections
-type connection struct {
+type Connection struct {
 	Description string      `json:"Description"`
 	UpSA        string      `json:"Up Area"`
 	DnSA        string      `json:"Dn Area"`
@@ -22,9 +22,9 @@ type connection struct {
 }
 
 // Extract data from Connections
-func getConnectionsData(rm *RasModel, fn string, i int) (string, connection, error) {
+func getConnectionsData(rm *RasModel, fn string, i int) (string, Connection, error) {
 	var name string
-	var connection connection
+	var connection Connection
 
 	f, err := rm.FileStore.GetObject(fn)
 	if err != nil {

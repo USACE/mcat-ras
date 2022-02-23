@@ -9,12 +9,12 @@ import (
 	"github.com/go-errors/errors" // warning: replaces standard errors
 )
 
-type storageArea struct {
+type StorageArea struct {
 	NumBCLines int      `json:"Num BC Lines"`
 	BCLines    []string `json:"BC Lines"`
 }
 
-type twoDArea struct {
+type TwoDArea struct {
 	NumCells   int      `json:"Num Mesh Cells"`
 	NumBCLines int      `json:"Num BC Lines"`
 	BCLines    []string `json:"BC Lines"`
@@ -67,10 +67,10 @@ areaLoop:
 		}
 	}
 	if is2D == "0" {
-		area := storageArea{}
+		area := StorageArea{}
 		return name, area, nil
 	} else {
-		area := twoDArea{
+		area := TwoDArea{
 			NumCells: numCells,
 		}
 		return name, area, nil

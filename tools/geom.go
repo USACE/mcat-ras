@@ -17,9 +17,9 @@ type GeomFileContents struct {
 	ProgramVersion string                 `json:"Program Version"`
 	Description    string                 `json:"Description"`
 	Structures     []hydraulicStructures  `json:"Hydraulic Structures"`
-	StorageAreas   map[string]storageArea `json:"Storage Areas"`
-	TwoDAreas      map[string]twoDArea    `json:"2D Areas"`
-	Connections    map[string]connection  `json:"Connections"`
+	StorageAreas   map[string]StorageArea `json:"Storage Areas"`
+	TwoDAreas      map[string]TwoDArea    `json:"2D Areas"`
+	Connections    map[string]Connection  `json:"Connections"`
 	Notes          string
 }
 
@@ -31,9 +31,9 @@ func getGeomData(rm *RasModel, fn string, wg *sync.WaitGroup) {
 	meta := GeomFileContents{
 		Path:         fn,
 		FileExt:      filepath.Ext(fn),
-		StorageAreas: make(map[string]storageArea),
-		TwoDAreas:    make(map[string]twoDArea),
-		Connections:  make(map[string]connection),
+		StorageAreas: make(map[string]StorageArea),
+		TwoDAreas:    make(map[string]TwoDArea),
+		Connections:  make(map[string]Connection),
 	}
 
 	var err error
@@ -95,11 +95,11 @@ func getGeomData(rm *RasModel, fn string, wg *sync.WaitGroup) {
 			}
 			switch areaData.(type) {
 
-			case storageArea:
-				meta.StorageAreas[areaName] = areaData.(storageArea)
+			case StorageArea:
+				meta.StorageAreas[areaName] = areaData.(StorageArea)
 
-			case twoDArea:
-				meta.TwoDAreas[areaName] = areaData.(twoDArea)
+			case TwoDArea:
+				meta.TwoDAreas[areaName] = areaData.(TwoDArea)
 			}
 			header = false
 

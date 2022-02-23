@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"net/http"
+	"path/filepath"
+	"strings"
 
-	ras "app/tools"
+	"app/tools"
 
 	"github.com/USACE/filestore"
 	"github.com/labstack/echo/v4"
@@ -26,12 +28,34 @@ func IsAModel(fs *filestore.FileStore) echo.HandlerFunc {
 			return c.JSON(http.StatusBadRequest, "Missing query parameter: `definition_file`")
 		}
 
-		rm, err := ras.NewRasModel(definitionFile, *fs)
-		if err != nil {
-			return c.JSON(http.StatusOK, false)
-		}
-		isIt := rm.IsAModel()
-
-		return c.JSON(http.StatusOK, isIt)
+		return c.JSON(http.StatusOK, isAModel(fs, definitionFile))
 	}
+}
+
+func isAModel(fs *filestore.FileStore, definitionFile string) bool {
+	if filepath.Ext(definitionFile) != ".prj" {
+		return false
+	}
+
+	firstLine, err := tools.ReadFirstLine(*fs, definitionFile)
+	if err != nil {
+		return false
+	}
+
+	if !strings.Contains(firstLine, "Proj Title=") {
+		return false
+	}
+
+	files, err := modFiles(definitionFile, *fs)
+	if err != nil {
+		return false
+	}
+
+	for _, f := range files {
+		if filepath.Ext(f)[0:2] == ".g" {
+			return true
+		}
+	}
+
+	return false
 }

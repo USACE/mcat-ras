@@ -27,7 +27,7 @@ type fileExtMatchers struct {
 	Projection  *regexp.Regexp
 }
 
-var rasRE fileExtMatchers = fileExtMatchers{ // Maybe these ones are better? need a regex experts opinion
+var RasRE fileExtMatchers = fileExtMatchers{ // Maybe these ones are better? need a regex experts opinion
 	Geom:        regexp.MustCompile(".g[0-9][0-9]"),     // `^\.g(0[1-9]|[1-9][0-9])$`
 	Plan:        regexp.MustCompile(".p[0-9][0-9]"),     // `^\.p(0[1-9]|[1-9][0-9])$`
 	Steady:      regexp.MustCompile(".f[0-9][0-9]"),     // `^\.f(0[1-9]|[1-9][0-9])$`
@@ -329,19 +329,19 @@ func NewRasModel(key string, fs filestore.FileStore) (*RasModel, error) {
 
 		switch {
 
-		case rasRE.Plan.MatchString(ext):
+		case RasRE.Plan.MatchString(ext):
 			rasWG.Plan.Add(1)
 			go getPlanData(&rm, fp, &rasWG.Plan)
 
-		case rasRE.Geom.MatchString(ext):
+		case RasRE.Geom.MatchString(ext):
 			rasWG.Geom.Add(1)
 			go getGeomData(&rm, fp, &rasWG.Geom)
 
-		case rasRE.AllFlow.MatchString(ext):
+		case RasRE.AllFlow.MatchString(ext):
 			rasWG.Flow.Add(1)
 			go getFlowData(&rm, fp, &rasWG.Flow)
 
-		case rm.Metadata.Projection == "" && rasRE.Projection.MatchString(ext):
+		case rm.Metadata.Projection == "" && RasRE.Projection.MatchString(ext):
 			if filepath.Base(key) != filepath.Base(fp) && fp != projecFile {
 				rasWG.Projection.Add(1)
 				go getProjection(&rm, fp, &rasWG.Projection)
