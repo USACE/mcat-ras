@@ -194,8 +194,10 @@ var vacuumQuery []string = []string{"VACUUM ANALYZE models.ras;",
 	"VACUUM ANALYZE models.ras_rivers;",
 	"VACUUM ANALYZE models.ras_xs;",
 	"VACUUM ANALYZE models.ras_banks;",
-	"VACUUM ANALYZE models.ras_storage_areas;",
-	"VACUUM ANALYZE models.ras_two_d_areas;",
+	"VACUUM ANALYZE models.ras_areas;",
+	"VACUUM ANALYZE models.ras_breaklines;",
+	"VACUUM ANALYZE models.ras_bclines;",
+	"VACUUM ANALYZE models.ras_connections;",
 	"VACUUM ANALYZE models.ras_hydraulic_structures;"}
 
 // RefreshViewsQuery ...
