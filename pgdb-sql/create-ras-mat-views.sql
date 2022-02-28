@@ -59,7 +59,7 @@ SELECT
 FROM flow_files
 WITH DATA;
  
--- Geometry files 
+-- Geometry Metadata 
 CREATE MATERIALIZED VIEW models.ras_geometry_metadata AS
 with geom_files as (
     SELECT
@@ -75,12 +75,14 @@ SELECT
     (metadata ->> 'Program Version') AS version,
     (metadata ->> 'Description') AS description,
     json_array_length(CASE WHEN (metadata -> 'Hydraulic Structures')::text = 'null' THEN '[]'::json ELSE (metadata -> 'Hydraulic Structures') END) as num_reaches,
+    (SELECT count(*) FROM json_object_keys(metadata -> 'Storage Areas')) as num_storage_areas,
+    (SELECT count(*) FROM json_object_keys(metadata -> '2D Areas')) as num_two_d_areas,
+    (SELECT count(*) FROM json_object_keys(metadata -> 'Connections')) as num_connections,       
     (metadata ->> 'Path') AS s3_key
 FROM geom_files
 WITH DATA;
  
- 
- -- Rivers
+ -- Rivers Metadata
 CREATE MATERIALIZED VIEW models.ras_rivers_metadata AS
 with geom_files as (
     SELECT
@@ -92,6 +94,7 @@ with geom_files as (
 hydraulic_structures as (
     SELECT
         model_inventory_id,
+        (metadata ->> 'Path') as geometry_s3_key,
         json_array_elements(metadata -> 'Hydraulic Structures') as metadata
     FROM geom_files
     WHERE  (metadata ->> 'Hydraulic Structures') IS NOT NULL
@@ -103,7 +106,8 @@ SELECT
     (metadata ->> 'Num CrossSections') AS num_xs,
     (metadata -> 'Culvert Data' ->> 'Num Culverts') AS num_culverts,
     (metadata-> 'Bridge Data' ->> 'Num Bridges') AS num_bridges,
-    (metadata -> 'Inline Weir Data' ->> 'Num Inline Weirs') AS num_weirs
+    (metadata -> 'Inline Weir Data' ->> 'Num Inline Weirs') AS num_weirs,
+    geometry_s3_key
 FROM hydraulic_structures
 WITH DATA;
 
