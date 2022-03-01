@@ -83,10 +83,12 @@ FROM geom_files
 WITH DATA;
  
  -- Rivers Metadata
+-- DROP MATERIALIZED VIEW models.ras_rivers_metadata CASCADE
 CREATE MATERIALIZED VIEW models.ras_rivers_metadata AS
 with geom_files as (
     SELECT
         model_inventory_id,
+        s3_key,
         json_array_elements(model_metadata -> 'GeomFiles') as metadata
     FROM models.model
     WHERE (model_metadata ->> 'GeomFiles') IS NOT NULL
@@ -94,7 +96,8 @@ with geom_files as (
 hydraulic_structures as (
     SELECT
         model_inventory_id,
-        (metadata ->> 'Path') as geometry_s3_key,
+        s3_key,
+        (metadata ->> 'File Extension') as file_ext,
         json_array_elements(metadata -> 'Hydraulic Structures') as metadata
     FROM geom_files
     WHERE  (metadata ->> 'Hydraulic Structures') IS NOT NULL
@@ -107,7 +110,8 @@ SELECT
     (metadata -> 'Culvert Data' ->> 'Num Culverts') AS num_culverts,
     (metadata-> 'Bridge Data' ->> 'Num Bridges') AS num_bridges,
     (metadata -> 'Inline Weir Data' ->> 'Num Inline Weirs') AS num_weirs,
-    geometry_s3_key
+    file_ext,
+    s3_key
 FROM hydraulic_structures
 WITH DATA;
 

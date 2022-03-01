@@ -125,6 +125,7 @@ CREATE OR REPLACE VIEW models.ras_rivers_view AS
 			t.num_culverts AS "4. Num Culverts",
 			t.num_bridges  AS "5. Num Bridges",
 			t.num_weirs  AS "6. Num Inline Weirs",
-			t.geometry_s3_key AS "s3_key"
+			t.file_ext,
+			t.s3_key
 	FROM models.ras_rivers_metadata t
 	ORDER BY "1. River";
