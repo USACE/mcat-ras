@@ -1,23 +1,25 @@
 -- Check views for upstream tables/materialized views before changing/using!
---DROP VIEW models.ras_project_summary;
-CREATE OR REPLACE VIEW models.ras_project_summary AS 
+--DROP VIEW models.ras_projects_view;
+CREATE OR REPLACE VIEW models.ras_projects_view AS 
 
 SELECT  squery.col_1 AS "1. Project Title",
  		squery.col_2 AS "2. Description", 
  		squery.col_3 AS "3. Units",
- 		squery.col_4 AS "4. Data Collection",
- 		squery.col_5 AS "5. Source",
+ 		squery.col_4 AS "4. Current Plan",
+ 		squery.col_5 AS "5. Data Collection",
+ 		squery.col_6 AS "6. Source",
  		squery.s3_key AS s3_key
 FROM 
 	(SELECT
 		t.title AS col_1,
 		t.description AS col_2,
-		t.units AS col_3, 
-		i.title AS col_4,
-		i."source" AS col_5,
+		t.units AS col_3,
+		t.current_plan AS col_4, 		
+		i.title AS col_5,
+		i."source" AS col_6,
 		r.s3_key AS s3_key
 			
-	 FROM models.ras_project_metadata t
+	 FROM models.ras_projects_metadata t
 	 JOIN models.model r ON r.model_inventory_id = t.model_inventory_id
 	 JOIN inventory.collections i ON i.collection_id = t.collection 
 	) squery;
