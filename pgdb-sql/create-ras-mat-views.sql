@@ -1,7 +1,8 @@
 -- MATERIALIZED VIEWS FOR MODELS
 
--- Project files
-CREATE MATERIALIZED VIEW models.ras_project_metadata AS
+-- RAS Project Metadata
+-- DROP MATERIALIZED VIEW models.ras_projects_metadata CASCADE
+CREATE MATERIALIZED VIEW models.ras_projects_metadata AS
 SELECT
     models.model_inventory_id,
     c.collection_id AS collection,
@@ -12,6 +13,7 @@ SELECT
     models.s3_key AS s3_key
 FROM models.model AS models
 LEFT JOIN inventory.collections AS c USING (collection_id)
+WHERE models.type = 'RAS'
 WITH DATA;
 
 -- Plan files 
