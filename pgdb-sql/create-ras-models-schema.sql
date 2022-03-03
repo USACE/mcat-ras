@@ -1,15 +1,6 @@
 CREATE SCHEMA IF NOT EXISTS models;
 
 /*---------------------------------------------------------------------------*/
--- Create models.column_reference table
-/*---------------------------------------------------------------------------*/
-CREATE TABLE IF NOT EXISTS models.column_reference(
-    model_type TEXT PRIMARY KEY,
-    map JSON NOT NULL
-);
-
-
-/*---------------------------------------------------------------------------*/
 -- Create models.model table
 /*---------------------------------------------------------------------------*/
 CREATE TABLE IF NOT EXISTS models.model (
