@@ -50,7 +50,7 @@ func getFlowData(rm *RasModel, fn string, wg *sync.WaitGroup) {
 
 	hasher := sha256.New()
 
-	fs := io.TeeReader(f, hasher) //data is still a stream
+	fs := io.TeeReader(f, hasher) // fs is still a stream
 	sc := bufio.NewScanner(fs)
 
 	var line string
