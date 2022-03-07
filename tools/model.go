@@ -51,10 +51,11 @@ type rasWaitGroup struct {
 
 // Model is a general type should contain all necessary data for a model of any type.
 type Model struct {
-	Type           string
-	Version        string
-	DefinitionFile string
-	Files          ModelFiles
+	Type               string
+	Version            string
+	DefinitionFile     string
+	DefinitionFileHash string
+	Files              ModelFiles
 }
 
 // ModelFiles ...
@@ -139,9 +140,10 @@ func (rm *RasModel) ModelVersion() string {
 // Index ...
 func (rm *RasModel) Index() Model {
 	mod := Model{
-		Type:           rm.Type,
-		Version:        rm.Version,
-		DefinitionFile: filepath.Base(rm.Metadata.ProjFilePath),
+		Type:               rm.Type,
+		Version:            rm.Version,
+		DefinitionFile:     filepath.Base(rm.Metadata.ProjFilePath),
+		DefinitionFileHash: rm.Metadata.ProjFileContents.Hash,
 		Files: ModelFiles{
 			InputFiles: InputFiles{
 				ControlFiles: ControlFiles{

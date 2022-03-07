@@ -2,7 +2,9 @@ package tools
 
 import (
 	"bufio"
+	"crypto/sha256"
 	"fmt"
+	"io"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -24,6 +26,7 @@ type ProjectMetadata struct {
 
 // PrjFileContents keywords  and data container for ras project file search
 type PrjFileContents struct {
+	Hash            string
 	ProjTitle       string   //`json:"Proj Title"`
 	PlanFile        []string //`json:"Plan File"`
 	FlowFile        []string //`json:"Flow File"`
@@ -86,7 +89,11 @@ func getPrjData(rm *RasModel) error {
 	}
 	defer f.Close()
 
-	sc := bufio.NewScanner(f)
+	hasher := sha256.New()
+
+	fs := io.TeeReader(f, hasher) //data is still a stream
+	sc := bufio.NewScanner(fs)
+
 	var line string
 	for sc.Scan() {
 		line = sc.Text()
@@ -155,6 +162,7 @@ func getPrjData(rm *RasModel) error {
 			meta.Units = line
 		}
 	}
+	meta.Hash = fmt.Sprintf("%x", hasher.Sum(nil))
 
 	rm.Metadata.ProjFileContents = meta
 	return nil

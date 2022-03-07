@@ -2,16 +2,19 @@ package tools
 
 import (
 	"bufio"
+	"crypto/sha256"
 	"fmt"
+	"io"
 	"log"
 	"path/filepath"
 	"strings"
 	"sync"
 )
 
-// GeomFileContents keywords  and data container for ras flow file search
+// GeomFileContents keywords and data container for ras flow file search
 type GeomFileContents struct {
 	Path           string
+	Hash           string
 	FileExt        string                 `json:"File Extension"`
 	GeomTitle      string                 `json:"Geom Title"`
 	ProgramVersion string                 `json:"Program Version"`
@@ -52,7 +55,10 @@ func getGeomData(rm *RasModel, fn string, wg *sync.WaitGroup) {
 	}
 	defer f.Close()
 
-	sc := bufio.NewScanner(f)
+	hasher := sha256.New()
+
+	fs := io.TeeReader(f, hasher) //data is still a stream
+	sc := bufio.NewScanner(fs)
 
 	var description string
 
@@ -78,6 +84,7 @@ func getGeomData(rm *RasModel, fn string, wg *sync.WaitGroup) {
 				meta.Description += description
 			}
 
+		// the following functions cannot take the same scanner because they can reach the eof searching for content and exhaust the main scanner
 		case strings.HasPrefix(line, "River Reach="):
 			structures, err := getHydraulicStructureData(rm, fn, idx)
 			if err != nil {
@@ -132,5 +139,7 @@ func getGeomData(rm *RasModel, fn string, wg *sync.WaitGroup) {
 		}
 	}
 	msg = ""
+	meta.Hash = fmt.Sprintf("%x", hasher.Sum(nil))
+
 	return
 }
