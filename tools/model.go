@@ -142,7 +142,7 @@ func (rm *RasModel) Index() Model {
 	mod := Model{
 		Type:               rm.Type,
 		Version:            rm.Version,
-		DefinitionFile:     filepath.Base(rm.Metadata.ProjFilePath),
+		DefinitionFile:     rm.Metadata.ProjFilePath,
 		DefinitionFileHash: rm.Metadata.ProjFileContents.Hash,
 		Files: ModelFiles{
 			InputFiles: InputFiles{
