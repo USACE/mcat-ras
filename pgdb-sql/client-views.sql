@@ -38,13 +38,7 @@ FROM
 	(SELECT
 		t.plan_title AS col_1,
 		t.file_ext AS col_2,
-		
-	    CASE
-           WHEN t.flow_file IS NOT NULL THEN  rgm.file_ext || ' | ' || rfm.file_ext
-           WHEN t.unsteady_file IS NOT NULL THEN  rgm.file_ext  ||' | ' || rfm.file_ext
-           WHEN t.quasi_steady_file IS NOT NULL THEN rgm.file_ext  ||' | ' || rfm.file_ext
-	     END col_3,
-	     
+		t.geom_file || ' | ' || t.flow_file AS col_3,
 		t.description AS col_4, 
 		t.flow_regime AS col_5,
 		t."version" AS col_6, 
@@ -52,12 +46,6 @@ FROM
 			
 	 FROM models.ras_plan_metadata t
 	 JOIN models.model r ON r.model_inventory_id = t.model_inventory_id
-	 LEFT JOIN models.ras_geometry_metadata rgm 
-	 	ON rgm.model_inventory_id = t.model_inventory_id
-	 	AND t.geom_file = LTRIM(rgm.file_ext,'.')
-	 LEFT JOIN models.ras_flow_metadata rfm 
-	 	ON rfm.model_inventory_id = t.model_inventory_id
-	 	AND t.flow_file = LTRIM(rfm.file_ext,'.')
 	) squery;
 
 -- DROP VIEW models.ras_flow_files;
@@ -75,11 +63,9 @@ CREATE OR REPLACE VIEW models.ras_flow_files AS
 			t.flow_title AS col_1, 
 			t.file_ext AS col_2,
 		    CASE
-
-            -- update tjios!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	           WHEN t.file_ext IS NOT NULL THEN 'Steady'
-	           WHEN t.file_ext IS NOT NULL THEN 'Unsteady'
-	           WHEN t.file_ext IS NOT NULL THEN 'Quasi-Steady'
+	           WHEN t.file_ext LIKE '.f%' THEN 'Steady'
+	           WHEN t.file_ext LIKE '.u%'  THEN 'Unsteady'
+	           WHEN t.file_ext LIKE '.q%'  THEN 'Quasi-Steady'
 		     END col_3,
 		     
 			t.num_profiles AS col_4, 

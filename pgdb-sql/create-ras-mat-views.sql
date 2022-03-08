@@ -16,7 +16,7 @@ LEFT JOIN inventory.collections AS c USING (collection_id)
 WHERE models.type = 'RAS'
 WITH DATA;
 
--- Plan files 
+-- DROP MATERIALIZED VIEW models.ras_plan_metadata CASCADE
 CREATE MATERIALIZED VIEW models.ras_plan_metadata AS
 with plan_files as (
     SELECT
@@ -34,8 +34,6 @@ SELECT
     (metadata ->> 'ShortIdentifier') AS short_id,
     (metadata ->> 'GeomFile') AS geom_file,
     (metadata ->> 'FlowFile') AS flow_file,
-    (metadata ->> 'QuasiSteadyFile') AS quasi_steady_file,
-    (metadata ->> 'UnsteadyFile') AS unsteady_file,
     (metadata ->> 'FlowRegime') AS flow_regime,
     (metadata ->> 'Path') AS s3_key
 FROM plan_files
