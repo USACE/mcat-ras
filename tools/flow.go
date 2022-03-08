@@ -2,7 +2,9 @@ package tools
 
 import (
 	"bufio"
+	"crypto/sha256"
 	"fmt"
+	"io"
 	"log"
 	"path/filepath"
 	"regexp"
@@ -13,6 +15,7 @@ import (
 // FlowFileContents keywords  and data container for ras flow file search
 type FlowFileContents struct {
 	Path                string
+	Hash                string
 	FileExt             string //`json:"File Extension"`
 	FlowTitle           string //`json:"Flow Title"`
 	ProgramVersion      string //`json:"Program Version"`
@@ -45,7 +48,11 @@ func getFlowData(rm *RasModel, fn string, wg *sync.WaitGroup) {
 	}
 	defer f.Close()
 
-	sc := bufio.NewScanner(f)
+	hasher := sha256.New()
+
+	fs := io.TeeReader(f, hasher) // fs is still a stream
+	sc := bufio.NewScanner(fs)
+
 	var line string
 	for sc.Scan() {
 
@@ -78,5 +85,7 @@ func getFlowData(rm *RasModel, fn string, wg *sync.WaitGroup) {
 	}
 
 	msg = ""
+	meta.Hash = fmt.Sprintf("%x", hasher.Sum(nil))
+
 	return
 }
