@@ -201,7 +201,7 @@ var vacuumQuery []string = []string{"VACUUM ANALYZE models.ras;",
 	"VACUUM ANALYZE models.ras_hydraulic_structures;"}
 
 // RefreshViewsQuery ...
-var refreshViewsQuery []string = []string{"REFRESH MATERIALIZED VIEW models.ras_project_metadata;",
+var refreshViewsQuery []string = []string{"REFRESH MATERIALIZED VIEW models.ras_projects_metadata;",
 	"REFRESH MATERIALIZED VIEW models.ras_plan_metadata;",
 	"REFRESH MATERIALIZED VIEW models.ras_flow_metadata;",
 	"REFRESH MATERIALIZED VIEW models.ras_geometry_metadata;",
