@@ -1,23 +1,25 @@
 -- Check views for upstream tables/materialized views before changing/using!
---DROP VIEW models.ras_project_summary;
-CREATE OR REPLACE VIEW models.ras_project_summary AS 
+--DROP VIEW models.ras_projects_view;
+CREATE OR REPLACE VIEW models.ras_projects_view AS 
 
 SELECT  squery.col_1 AS "1. Project Title",
  		squery.col_2 AS "2. Description", 
  		squery.col_3 AS "3. Units",
- 		squery.col_4 AS "4. Data Collection",
- 		squery.col_5 AS "5. Source",
+ 		squery.col_4 AS "4. Current Plan",
+ 		squery.col_5 AS "5. Data Collection",
+ 		squery.col_6 AS "6. Source",
  		squery.s3_key AS s3_key
 FROM 
 	(SELECT
 		t.title AS col_1,
 		t.description AS col_2,
-		t.units AS col_3, 
-		i.title AS col_4,
-		i."source" AS col_5,
+		t.units AS col_3,
+		t.current_plan AS col_4, 		
+		i.title AS col_5,
+		i."source" AS col_6,
 		r.s3_key AS s3_key
 			
-	 FROM ras_project_metadata t
+	 FROM models.ras_projects_metadata t
 	 JOIN models.model r ON r.model_inventory_id = t.model_inventory_id
 	 JOIN inventory.collections i ON i.collection_id = t.collection 
 	) squery;
@@ -26,11 +28,11 @@ FROM
 CREATE OR REPLACE VIEW models.ras_plan_files AS 
 
 SELECT  squery.col_1 AS "1. Plan Title",
-		squery.col_2 AS "2. Plan File",
+		squery.col_2 AS "2. File Ext",
  		squery.col_3 AS "3. Simulation Files (geometry | flow)",
  		squery.col_4 AS "4. Description", 
  		squery.col_5 AS "5. Flow Regime",
- 		squery.col_6 AS "6. RAS Version",
+ 		squery.col_6 AS "6. Version",
  		squery.s3_key AS s3_key
 FROM 
 	(SELECT
@@ -38,9 +40,9 @@ FROM
 		t.file_ext AS col_2,
 		
 	    CASE
-           WHEN t.flow_file IS NOT NULL THEN  rgm.geom_title ||' | ' || rfm.flow_title
-           WHEN t.unsteady_file IS NOT NULL THEN  rgm.geom_title  ||' | ' || rfm.flow_title
-           WHEN t.quasi_steady_file IS NOT NULL THEN rgm.geom_title  ||' | ' || rfm.flow_title
+           WHEN t.flow_file IS NOT NULL THEN  rgm.file_ext || ' | ' || rfm.file_ext
+           WHEN t.unsteady_file IS NOT NULL THEN  rgm.file_ext  ||' | ' || rfm.file_ext
+           WHEN t.quasi_steady_file IS NOT NULL THEN rgm.file_ext  ||' | ' || rfm.file_ext
 	     END col_3,
 	     
 		t.description AS col_4, 
@@ -48,7 +50,7 @@ FROM
 		t."version" AS col_6, 
 		r.s3_key AS s3_key
 			
-	 FROM ras_plan_metadata t
+	 FROM models.ras_plan_metadata t
 	 JOIN models.model r ON r.model_inventory_id = t.model_inventory_id
 	 LEFT JOIN models.ras_geometry_metadata rgm 
 	 	ON rgm.model_inventory_id = t.model_inventory_id
@@ -62,11 +64,11 @@ FROM
 CREATE OR REPLACE VIEW models.ras_flow_files AS 
 
 	SELECT  squery.col_1 AS "1. Flow Title",
-	 		squery.col_2 AS "2. Simulation File",
+	 		squery.col_2 AS "2. File Ext",
 	 		squery.col_3 AS "3. Type", 
-	 		squery.col_4 AS "4. Profiles",
+	 		squery.col_4 AS "4. Num Profiles",
 	 		squery.col_5 AS "5. Profile Names",
-	 		squery.col_6 AS "6. RAS Version",
+	 		squery.col_6 AS "6. Version",
 	 		squery.s3_key AS s3_key
 	FROM 
 		(SELECT
@@ -85,64 +87,47 @@ CREATE OR REPLACE VIEW models.ras_flow_files AS
 			t."version" AS col_6, 
 			r.s3_key AS s3_key
 				
-		 FROM ras_flow_metadata t
+		 FROM models.ras_flow_metadata t
 		 JOIN models.model r ON r.model_inventory_id = t.model_inventory_id
 		) squery;
 
--- TODO: SPlit this into 2 queries: for files and river-reaches
--- DROP VIEW models.ras_geometry_file_view;
-CREATE VIEW models.ras_geometry_file_view AS 
-SELECT geometry.geom_title AS "1. Geometry Title",
-	geometry.file_ext AS "2. Simulation File",
-    geometry.river_name || ' - ' || geometry.reach_name AS "3. River - Reach",
-    geometry.geom_description AS "4. Description",
-    geometry.n_cross_sections AS "5. Cross Sections",
-    geometry.n_culverts AS "6. Culverts",
-    geometry.num_bridges  AS "7. Bridges",
-    geometry.num_inline_wiers  AS "8. Inline Wiers",
-    geometry.geometry_model_version AS "9. Version", 
-    plan.s3_key AS "s3_key"
-    
-   FROM ( SELECT c.title,
-            m.name AS model_name,
-            m.model_inventory_id,
-            m.s3_key AS "s3_key"
-           FROM models.model m
-             JOIN inventory.collections c USING (collection_id)
-          WHERE m.type = 'RAS'::text AND (m.model_metadata ->> 'PlanFiles'::text) <> 'null'::text 
-          AND (m.model_metadata ->> 'ProjFileContents'::text) <> 'null'::text) plan
-          
-          
-     JOIN ( WITH query_1 AS (
-                 SELECT m.model_inventory_id,
-                    m.model_metadata ->> 'GeomFiles'::text AS geom_files
-                   FROM models.model m
-                  ORDER BY m.model_inventory_id
-                ), query_2 AS (
-                 SELECT query_1.model_inventory_id,
-                    json_array_elements(query_1.geom_files::json) ->> 'Program Version'::text AS geometry_model_version,
-                    json_array_elements(query_1.geom_files::json) ->> 'Geom Title'::text AS geom_title,
-                    json_array_elements(query_1.geom_files::json) ->> 'File Extension'::text AS file_ext,
-                    json_array_elements(query_1.geom_files::json) ->> 'Description'::text AS geom_description,
-                    json_array_elements(query_1.geom_files::json) ->> 'Hydraulic Structures'::text AS structs
-                   FROM query_1
-                  WHERE query_1.geom_files IS NOT NULL
-                  ORDER BY query_1.model_inventory_id
-                )
-                
-         SELECT query_2.model_inventory_id,
-            query_2.geometry_model_version,
-            query_2.geom_title,
-            query_2.file_ext,
-            query_2.geom_description,
-            (json_array_elements(query_2.structs::json) -> 'Inline Weir Data'::text) ->> 'Num Inline Weirs'::text AS num_inline_wiers,
-            (json_array_elements(query_2.structs::json) -> 'Culvert Data'::text) ->> 'Num Culverts'::text AS n_culverts,
-            (json_array_elements(query_2.structs::json) -> 'Bridge Data'::text) ->> 'Num Bridges'::text AS num_bridges,
-            json_array_elements(query_2.structs::json) ->> 'Num CrossSections'::text AS n_cross_sections,
-            json_array_elements(query_2.structs::json) ->> 'Reach Name'::text AS reach_name,
-            json_array_elements(query_2.structs::json) ->> 'River Name'::text AS river_name
-           FROM query_2
-          WHERE query_2.structs IS NOT NULL
-          ORDER BY query_2.geom_title) geometry USING (model_inventory_id)
+-- DROP VIEW models.ras_geometry_files_view;
+CREATE OR REPLACE VIEW models.ras_geometry_files_view AS 
+	SELECT 	squery.geom_title AS "1. Geometry Title",
+			squery.file_ext AS "2. File Ext",
+			squery.description AS "3. Description",
+			squery.version AS "4. Version",
+			squery.num_reaches AS "5. Num Reaches", 
+			squery.num_storage_areas AS "6. Num Storage Areas", 
+			squery.num_two_d_areas AS "7. Num 2D Areas",
+			squery.num_connections AS "8. Num Connections", 
+			squery.s3_key AS "s3_key"
+	FROM 
+		(SELECT
+			t.geom_title,
+			t.file_ext,
+			t.description,
+			t.version,
+			t.num_reaches,
+			t.num_storage_areas,
+			t.num_two_d_areas,
+			t.num_connections,
+			r.s3_key
 
-  ORDER BY "1. Geometry Title";
+			FROM models.ras_geometry_metadata t
+			JOIN models.model r ON r.model_inventory_id = t.model_inventory_id
+		) squery
+	ORDER BY "2. File Ext";
+
+-- Ras Rivers View
+CREATE OR REPLACE VIEW models.ras_rivers_view AS
+	SELECT 	t.river_name AS "1. River",
+			t.reach_name AS "2. Reach",
+			t.num_xs AS "3. Num Cross Sections",
+			t.num_culverts AS "4. Num Culverts",
+			t.num_bridges  AS "5. Num Bridges",
+			t.num_weirs  AS "6. Num Inline Weirs",
+			t.file_ext,
+			t.s3_key
+	FROM models.ras_rivers_metadata t
+	ORDER BY "1. River";
