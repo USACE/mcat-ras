@@ -20,10 +20,8 @@ type PlanFileContents struct {
 	PlanTitle       string //`json:"Plan Title"`
 	ShortIdentifier string //`json:"Short Identifier"`
 	ProgramVersion  string //`json:"Program Version"`
-	QuasiSteadyFile string //`json:"QuasiSteady File"` //This is not currently used
-	UnsteadyFile    string //`json:"Unsteady File"`    //This is not currently used
 	GeomFile        string //`json:"Geom File"`
-	FlowFile        string //`json:"Flow File"`
+	FlowFile        string //`json:"Flow File"` // unsteady or steady both flow files are stored as FlowFile in HEC RAS plan file, replicating the same here
 	FlowRegime      string //`json:"FlowRegime"`
 	Description     string //`json:"Description"`
 	Notes           string
