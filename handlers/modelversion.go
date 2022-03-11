@@ -108,9 +108,10 @@ func getVersions(definitionFile string, fs filestore.FileStore) (string, error) 
 			tools.RasRE.AllFlow.MatchString(ext) {
 			ver, err := pullVersion(fp, fs)
 			if err != nil {
-				return version, err
+				fmt.Println(err)
+			} else {
+				version += fmt.Sprintf("%s: %s, ", ext, ver)
 			}
-			version += fmt.Sprintf("%s: %s, ", ext, ver)
 		}
 	}
 
