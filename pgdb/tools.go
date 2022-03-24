@@ -81,6 +81,8 @@ func upsertRiver(tx *sqlx.Tx, river ras.VectorFeature, geometryFileID int) (rive
 func upsertModelInfo(definitionFile string, ac *config.APIConfig, db *sqlx.DB) error {
 	ctx := context.Background()
 	tx, err := db.BeginTxx(ctx, nil)
+	defer tx.Rollback() // necessary so that transaction is not left idle if there are any errors
+
 	if err != nil {
 		log.Println(err)
 		return errors.Wrap(err, 0)
@@ -101,7 +103,6 @@ func upsertModelInfo(definitionFile string, ac *config.APIConfig, db *sqlx.DB) e
 	if err != nil {
 		fmt.Println("Model ID:", modelID, "Name|", definitionFile)
 		log.Println("Error: ", err, "Rolling back")
-		tx.Rollback()
 		return errors.Wrap(err, 0)
 	}
 
@@ -122,6 +123,8 @@ func upsertModelInfo(definitionFile string, ac *config.APIConfig, db *sqlx.DB) e
 func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.DB) error {
 	ctx := context.Background()
 	tx, err := db.BeginTxx(ctx, nil)
+	defer tx.Rollback() // necessary so that transaction is not left idle if there are any errors
+
 	if err != nil {
 		log.Println(err)
 		return errors.Wrap(err, 0)
@@ -164,7 +167,6 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 				version,
 				geometryFile.Description); err != nil {
 				log.Println("Geometry File", geometryFile.FileExt, "|", err)
-				tx.Rollback()
 				return errors.Wrap(err, 0)
 			}
 
@@ -180,7 +182,6 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 				riverID, err := upsertRiver(tx, river, geometryFileID)
 				if err != nil {
 					log.Println(err)
-					tx.Rollback()
 					return errors.Wrap(err, 0)
 				}
 				riverIDMap[river.FeatureName] = riverID
@@ -195,14 +196,12 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 				xsStation, err := strconv.ParseFloat(xs.FeatureName, 64)
 				if err != nil {
 					log.Println("XS", geometryFile.FileExt, "|", err)
-					tx.Rollback()
 					return errors.Wrap(err, 0)
 				}
 
 				riverID := riverIDMap[riverReach.(string)]
 				if err = tx.Get(&xsID, upsertXSSQL, riverID, xsStation, cutLineProfileMatch, xs.Geometry); err != nil {
 					log.Println(err)
-					tx.Rollback()
 					return errors.Wrap(err, 0)
 				}
 				riverReachXSName := fmt.Sprintf("%s-%s", riverReach, xs.FeatureName)
@@ -221,7 +220,6 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 				_, err = tx.Exec(upsertBanksSQL, xsID, bankStation, banks.Geometry)
 				if err != nil {
 					log.Println("Banks", geometryFile.FileExt, "|", err)
-					tx.Rollback()
 					return errors.Wrap(err, 0)
 				}
 			}
@@ -235,7 +233,6 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 				err = tx.Get(&aID, upsertAreasSQL, geometryFileID, storageArea.FeatureName, false, storageArea.Geometry)
 				if err != nil {
 					log.Println("Storage Areas", geometryFile.FileExt, "|", err)
-					tx.Rollback()
 					return errors.Wrap(err, 0)
 				}
 				areasIDMap[storageArea.FeatureName] = aID
@@ -247,7 +244,6 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 				err = tx.Get(&aID, upsertAreasSQL, geometryFileID, twoDArea.FeatureName, true, twoDArea.Geometry)
 				if err != nil {
 					log.Println("TwoD Areas", geometryFile.FileExt, "|", err)
-					tx.Rollback()
 					return errors.Wrap(err, 0)
 				}
 				areasIDMap[twoDArea.FeatureName] = aID
@@ -258,7 +254,6 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 				_, err = tx.Exec(upsertConnectionsSQL, geometryFileID, conn.FeatureName, conn.Fields["Up Area"], conn.Fields["Dn Area"], conn.Geometry)
 				if err != nil {
 					log.Println("Connections", geometryFile.FileExt, "|", err)
-					tx.Rollback()
 					return errors.Wrap(err, 0)
 				}
 			}
@@ -268,7 +263,6 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 				_, err = tx.Exec(upsertBreaklinesSQL, geometryFileID, bl.FeatureName, bl.Geometry)
 				if err != nil {
 					log.Println("Breaklines", geometryFile.FileExt, "|", err)
-					tx.Rollback()
 					return errors.Wrap(err, 0)
 				}
 			}
@@ -279,11 +273,12 @@ func upsertModelGeometry(definitionFile string, ac *config.APIConfig, db *sqlx.D
 				_, err = tx.Exec(upsertBClinesSQL, areaID, bcl.FeatureName, bcl.Geometry)
 				if err != nil {
 					log.Println("BC Lines", geometryFile.FileExt, "|", err)
-					tx.Rollback()
 					return errors.Wrap(err, 0)
 				}
 			}
 		}
+		// as there are no insert/update queries outside of the current if statement
+		// we are fine to commit the transaction inside the current if statement
 		err = tx.Commit()
 		if err != nil {
 			log.Println("Transaction Commit Error|", err)
