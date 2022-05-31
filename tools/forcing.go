@@ -1,22 +1,27 @@
 package tools
 
 import (
+	"fmt"
+	"path/filepath"
 	"time"
+
+	"github.com/USACE/filestore"
 )
 
 // Forcing Data ...
 type ForcingData struct {
-	Steady        map[string][]Profile `json:"Steady,omitempty"`
-	QuasiUnsteady interface{}          `json:"QuasiUnsteady,omitempty"` // to be implemented
-	Unsteady      map[string][]Profile `json:"Unsteady,omitempty"`
+	Steady        map[string][]Profile    `json:"Steady,omitempty"`
+	QuasiUnsteady interface{}             `json:"QuasiUnsteady,omitempty"` // to be implemented
+	Unsteady      map[string]UnsteadyData `json:"Unsteady,omitempty"`
 }
 
 // Boundary Condition ...
 type BoundaryCondition struct {
-	RS     string      `json:"river_station,omitempty"` // only exists for unsteady rivers
-	BCLine string      `json:"bc_line,omitempty"`       // only exists for unsteady storage and 2D areas
-	Type   string      `json:"type"`
-	Data   interface{} `json:"data"`
+	RS          string      `json:"river_station,omitempty"` // only exists for unsteady rivers
+	BCLine      string      `json:"bc_line,omitempty"`       // only exists for unsteady storage and 2D areas
+	Description string      `json:"description,omitempty"`
+	Type        string      `json:"type"`
+	Data        interface{} `json:"data"`
 }
 
 // Hydrograph Data.
@@ -36,4 +41,20 @@ type RatingCurveDataPair struct {
 
 // Elevation Controlled Gates Data.
 type ElevControlGates struct {
+}
+
+// Get Forcing Data from steady, unsteady or quasi-steady flow file.
+func GetForcingData(fd *ForcingData, fs filestore.FileStore, flowFilePath string) (err error) {
+	extPrefix := filepath.Ext(flowFilePath)[0:2]
+
+	if extPrefix == ".f" {
+		fmt.Sprintf("found steady flow file %s", flowFilePath)
+		// err = getSteadyData(fd, fs, flowFilePath)
+	} else if extPrefix == ".u" {
+		err = getUnsteadyData(fd, fs, flowFilePath)
+	} else if extPrefix == ".q" {
+		return err // not implemented
+	}
+
+	return err
 }
