@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/USACE/filestore"
@@ -27,11 +28,12 @@ type UnsteadyBoundaryConditions struct {
 	PumpStations map[string]BoundaryCondition
 }
 
-// Get Boundary Condition's data
-func getBoundaryCondition(sc *bufio.Scanner) (string, string, BoundaryCondition, bool, error) {
-	parentType := "" // either Reaches, Connections, Areas, or Pump Stations
-	parent := ""     // e.g. name of the river - reach, or name of Storage Area
-	bc := BoundaryCondition{}
+// Get Boundary Condition's data.
+// Advances the given scanner.
+// Returns if new RAS element is encountered or all necessary data is obtained.
+func getBoundaryCondition(sc *bufio.Scanner) (parentType string, parent string, bc BoundaryCondition, skipScan bool, err error) {
+	// either Reaches, Connections, Areas, or Pump Stations
+	// e.g. name of the river - reach, or name of Storage Area
 
 	// Get Parent, Name, and Location of Boundary Condition
 	bcArray := strings.Split(rightofEquals(sc.Text()), ",")
@@ -52,25 +54,70 @@ func getBoundaryCondition(sc *bufio.Scanner) (string, string, BoundaryCondition,
 	}
 
 	if parentType == "" {
-		return parentType, parent, bc, false, errors.New("Cannot determine if Boundary Condition is for a Reach, Connection, Area, or Pump Station.")
+		err = errors.New("Cannot determine if Boundary Condition is for a Reach, Connection, Area, or Pump Station.")
+		return
 	}
+
+	hg := Hydrograph{}
 
 	// Get type and data of boundary condition
 	for sc.Scan() {
 		line := sc.Text()
 		loe := leftofEquals(line)
 		if stringInSlice(loe, forcingElementsPrefix[:]) {
-			return parentType, parent, bc, true, nil
+			skipScan = true // a new HEC RAS element has been encountered, skip next scan and return
+			return
 		}
 
 		switch loe {
 		case "Friction Slope":
 			bc.Type = "Normal Depth"
-			slope, _ := parseFloat(strings.TrimSpace(strings.Split(rightofEquals(sc.Text()), ",")[0]), 64)
+			slope, _ := parseFloat(strings.TrimSpace(strings.Split(rightofEquals(line), ",")[0]), 64)
 			bc.Data = map[string]float64{"Friction Slope": slope}
-			return parentType, parent, bc, false, nil
+			return
+		case "Interval":
+			hg.TimeInterval = rightofEquals(sc.Text())
+			bc.Data = &hg
+		case "Flow Hydrograph":
+			bc.Type = loe
+			numVals, innerErr := strconv.Atoi(strings.TrimSpace(rightofEquals(line)))
+			if innerErr != nil {
+				err = innerErr
+				return
+			}
+			if numVals == 0 {
+				hg.TimeInterval = "" // time interval does not have any value without time series
+				return
+			}
+			series, innerErr := seriesFromTextBlock(sc, numVals, 80, 8)
+			if innerErr != nil {
+				err = innerErr
+				return
+			}
+			hg.Values = series
+		case "Use DSS":
+			udss := strings.TrimSpace(rightofEquals(line))
+			if udss == "True" {
+				hg.UseDSS = true
+			}
+		case "Use Fixed Start Time":
+			ufs := strings.TrimSpace(rightofEquals(line))
+			if ufs == "True" {
+				hg.UseFixedStart = true
+			}
+		case "Fixed Start Date/Time":
+			fsdt := strings.Split(rightofEquals(sc.Text()), ",")
+			if len(fsdt[0]) > 0 {
+				hg.FixedStartDateTime = &DateTime{}
+				hg.FixedStartDateTime.Date = fsdt[0]
+				hours, innerErr := strconv.Atoi(fsdt[1])
+				if innerErr != nil {
+					err = innerErr
+					return
+				}
+				hg.FixedStartDateTime.Hours = hours
+			}
 		}
-
 	}
 
 	return parentType, parent, bc, false, nil

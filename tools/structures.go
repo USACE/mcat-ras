@@ -2,7 +2,6 @@ package tools
 
 import (
 	"bufio"
-	"math"
 	"strconv"
 	"strings"
 
@@ -183,11 +182,6 @@ func getMaxMinElev(hsSc *bufio.Scanner, i int, nLines int, nSkipLines int, colWi
 
 	pair = maxMinPairs{Max: maxElev, Min: minElev}
 	return pair, i, nil
-}
-
-func numberofLines(nValues int, colWidth int, valueWidth int) int {
-	nLines := math.Ceil(float64(nValues) / (float64(colWidth) / float64(valueWidth)))
-	return int(nLines)
 }
 
 func getHighLowChord(hsSc *bufio.Scanner, i int, nElevText string, colWidth int, valueWidth int) ([2]maxMinPairs, int, error) {
@@ -500,7 +494,6 @@ func getWeirData(rm *RasModel, fn string, i int) (weirs, error) {
 				nElev, err := strconv.Atoi(strings.TrimSpace(rightofEquals(line)))
 				if err != nil {
 					return weir, errors.Wrap(err, 0)
-
 				}
 				nLines := numberofLines(nElev*2, 80, 8)
 

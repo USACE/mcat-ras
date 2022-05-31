@@ -3,13 +3,12 @@ package tools
 import (
 	"fmt"
 	"path/filepath"
-	"time"
 
 	"github.com/USACE/filestore"
 )
 
 // These prefixes are used to determine the beginning and end of HEC-RAS elements
-var forcingElementsPrefix = [...]string{"Boundary Condition"}
+var forcingElementsPrefix = [...]string{"Boundary Location"}
 
 // Forcing Data ...
 type ForcingData struct {
@@ -20,8 +19,8 @@ type ForcingData struct {
 
 // Boundary Condition ...
 type BoundaryCondition struct {
-	RS          string      `json:"river_station,omitempty"` // only exists for unsteady rivers
-	BCLine      string      `json:"bc_line,omitempty"`       // only exists for unsteady storage and 2D areas
+	RS          string      `json:",omitempty"`        // only exists for unsteady rivers
+	BCLine      string      `json:"bc_line,omitempty"` // only exists for unsteady storage and 2D areas
 	Description string      `json:"description,omitempty"`
 	Type        string      `json:"type"`
 	Data        interface{} `json:"data"`
@@ -30,10 +29,16 @@ type BoundaryCondition struct {
 // Hydrograph Data.
 // Can be Flow, Stage, Precipitation, or Gate Opening Hydrograph.
 type Hydrograph struct {
-	TimeInterval       int       `json:"time_interval"` // seconds
-	Values             []float64 `json:"values"`
-	UseFixedStart      bool      `json:"fixed_start"`
-	FixedStartDateTime time.Time `json:"fixed_start_date_time,omitempty"` // HEC RAS time does not have time zone, using UTC
+	TimeInterval       string    `json:"time_interval,omitempty"`
+	Values             []float64 `json:"values,omitempty"`
+	UseDSS             bool      `json:"use_dss,omitempty"`               // potential issue: UseDSS will have false by default
+	UseFixedStart      bool      `json:"fixed_start,omitempty"`           // potential issue: UseFixedStart will have false by default
+	FixedStartDateTime *DateTime `json:"fixed_start_date_time,omitempty"` // pointer to have zero value, so that omitempty can work
+}
+
+type DateTime struct {
+	Date  string `json:"date,omitempty"`
+	Hours int    `json:"hours,omitempty"`
 }
 
 // Rating Curve Data Pair

@@ -2,6 +2,7 @@ package tools
 
 import (
 	"bufio"
+	"math"
 	"strconv"
 	"strings"
 
@@ -40,6 +41,9 @@ func minValue(values []float64) (float64, error) {
 
 func rightofEquals(line string) string {
 	return strings.TrimSpace(strings.Split(line, "=")[1])
+}
+func leftofEquals(line string) string {
+	return strings.TrimSpace(strings.Split(line, "=")[0])
 }
 
 func getDescription(sc *bufio.Scanner, idx int, endLine string) (string, int, error) {
@@ -95,4 +99,34 @@ func parseFloat(s string, bitSize int) (float64, error) {
 		return 0, nil
 	}
 	return strconv.ParseFloat(s, bitSize)
+}
+
+func numberofLines(nValues int, colWidth int, valueWidth int) int {
+	nLines := math.Ceil(float64(nValues) / (float64(colWidth) / float64(valueWidth)))
+	return int(nLines)
+}
+
+// Get data series from HEC-RAS Text block
+func seriesFromTextBlock(sc *bufio.Scanner, nValues int, colWidth int, valueWidth int) ([]float64, error) {
+	series := []float64{}
+out:
+	for sc.Scan() {
+		line := sc.Text()
+		for s := 0; s < colWidth; {
+			if len(line) > s {
+				val, err := parseFloat(strings.TrimSpace(line[s:s+valueWidth]), 64)
+				if err != nil {
+					return series, errors.Wrap(err, 0)
+				}
+				series = append(series, val)
+				if len(series) == nValues {
+					break out
+				}
+			} else {
+				break
+			}
+			s += valueWidth
+		}
+	}
+	return series, nil
 }
