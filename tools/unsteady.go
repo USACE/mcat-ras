@@ -12,10 +12,11 @@ import (
 
 // Unsteady Data
 type UnsteadyData struct {
-	InitialConditions  interface{} // to be implemented
-	BoundaryConditions UnsteadyBoundaryConditions
-	MeterologicalData  interface{} // to be implemented
-	ObservedData       interface{} // to be implemented // added in version 6.2
+	// omitting empty here because null InitialConditions maybe assumed as no initial condition exist, while in fact it may or may not exist until implemented
+	InitialConditions  interface{}                `json:",omitempty"` // to be implemented
+	BoundaryConditions UnsteadyBoundaryConditions `json:",omitempty"`
+	MeterologicalData  interface{}                `json:",omitempty"` // to be implemented
+	ObservedData       interface{}                `json:",omitempty"` // to be implemented // added in version 6.2
 }
 
 // Unsteady Boundary Conditions
@@ -26,12 +27,13 @@ type UnsteadyBoundaryConditions struct {
 	PumpStations map[string]BoundaryCondition
 }
 
-// Get Boundary Condition's parent
-func getBoundaryCondition(sc *bufio.Scanner) (string, string, BoundaryCondition, error) {
+// Get Boundary Condition's data
+func getBoundaryCondition(sc *bufio.Scanner) (string, string, BoundaryCondition, bool, error) {
 	parentType := "" // either Reaches, Connections, Areas, or Pump Stations
 	parent := ""     // e.g. name of the river - reach, or name of Storage Area
 	bc := BoundaryCondition{}
 
+	// Get Parent, Name, and Location of Boundary Condition
 	bcArray := strings.Split(rightofEquals(sc.Text()), ",")
 	if strings.TrimSpace(bcArray[0]) != "" {
 		parent = fmt.Sprintf("%s - %s", strings.TrimSpace(bcArray[0]), strings.TrimSpace(bcArray[1]))
@@ -50,10 +52,28 @@ func getBoundaryCondition(sc *bufio.Scanner) (string, string, BoundaryCondition,
 	}
 
 	if parentType == "" {
-		return parentType, parent, bc, errors.New("Cannot determine if Boundary Condition is for a Reach, Connection, Area, or Pump Station.")
+		return parentType, parent, bc, false, errors.New("Cannot determine if Boundary Condition is for a Reach, Connection, Area, or Pump Station.")
 	}
 
-	return parentType, parent, bc, nil
+	// Get type and data of boundary condition
+	for sc.Scan() {
+		line := sc.Text()
+		loe := leftofEquals(line)
+		if stringInSlice(loe, forcingElementsPrefix[:]) {
+			return parentType, parent, bc, true, nil
+		}
+
+		switch loe {
+		case "Friction Slope":
+			bc.Type = "Normal Depth"
+			slope, _ := parseFloat(strings.TrimSpace(strings.Split(rightofEquals(sc.Text()), ",")[0]), 64)
+			bc.Data = map[string]float64{"Friction Slope": slope}
+			return parentType, parent, bc, false, nil
+		}
+
+	}
+
+	return parentType, parent, bc, false, nil
 }
 
 // Get Forcing Data from unsteady flow file.
@@ -75,13 +95,19 @@ func getUnsteadyData(fd *ForcingData, fs filestore.FileStore, flowFilePath strin
 	defer file.Close()
 
 	sc := bufio.NewScanner(file)
+	eof := !sc.Scan()
+	if err := sc.Err(); err != nil {
+		return err
+	}
+	skipScan := false
 
-	for sc.Scan() {
+	for eof == false {
 		line := sc.Text()
 
 		switch {
 		case strings.HasPrefix(line, "Boundary Location="):
-			parentType, parent, bc, err := getBoundaryCondition(sc)
+			parentType, parent, bc, ss, err := getBoundaryCondition(sc)
+			skipScan = ss
 			if err != nil {
 				return errors.Wrap(err, 0)
 			}
@@ -95,6 +121,14 @@ func getUnsteadyData(fd *ForcingData, fs filestore.FileStore, flowFilePath strin
 				ud.BoundaryConditions.Connections[parent] = append(ud.BoundaryConditions.Reaches[parent], bc)
 			case "PumpStation":
 				ud.BoundaryConditions.PumpStations[parent] = bc
+			}
+		}
+
+		// if a new RAS element is encountered during the above switch statement, scanning again will skip that element, therefore skip scan
+		if skipScan == false {
+			eof = !sc.Scan()
+			if err := sc.Err(); err != nil {
+				return err
 			}
 		}
 	}

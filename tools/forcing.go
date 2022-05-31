@@ -8,6 +8,9 @@ import (
 	"github.com/USACE/filestore"
 )
 
+// These prefixes are used to determine the beginning and end of HEC-RAS elements
+var forcingElementsPrefix = [...]string{"Boundary Condition"}
+
 // Forcing Data ...
 type ForcingData struct {
 	Steady        map[string][]Profile    `json:"Steady,omitempty"`
