@@ -28,15 +28,9 @@ type UnsteadyBoundaryConditions struct {
 	PumpStations map[string]BoundaryCondition
 }
 
-// Get Boundary Condition's data.
-// Advances the given scanner.
-// Returns if new RAS element is encountered or all necessary data is obtained.
-func getBoundaryCondition(sc *bufio.Scanner) (parentType string, parent string, bc BoundaryCondition, skipScan bool, err error) {
-	// either Reaches, Connections, Areas, or Pump Stations
-	// e.g. name of the river - reach, or name of Storage Area
-
-	// Get Parent, Name, and Location of Boundary Condition
-	bcArray := strings.Split(rightofEquals(sc.Text()), ",")
+// Parse Boundary Condition's header.
+func parseBCHeader(line string) (parentType string, parent string, bc BoundaryCondition, err error) {
+	bcArray := strings.Split(rightofEquals(line), ",")
 	if strings.TrimSpace(bcArray[0]) != "" {
 		parent = fmt.Sprintf("%s - %s", strings.TrimSpace(bcArray[0]), strings.TrimSpace(bcArray[1]))
 		parentType = "Reach"
@@ -54,7 +48,22 @@ func getBoundaryCondition(sc *bufio.Scanner) (parentType string, parent string, 
 	}
 
 	if parentType == "" {
-		err = errors.New("Cannot determine if Boundary Condition is for a Reach, Connection, Area, or Pump Station.")
+		err = errors.Errorf("Cannot determine if Boundary Condition is for a Reach, Connection, Area, or Pump Station at line '%s'.", line)
+		return
+	}
+	return
+}
+
+// Get Boundary Condition's data.
+// Advances the given scanner.
+// Returns if new RAS element is encountered or all necessary data is obtained.
+func getBoundaryCondition(sc *bufio.Scanner) (parentType string, parent string, bc BoundaryCondition, skipScan bool, err error) {
+	// either Reaches, Connections, Areas, or Pump Stations
+	// e.g. name of the river - reach, or name of Storage Area
+
+	// Get Parent, Name, and Location of Boundary Condition
+	parentType, parent, bc, err = parseBCHeader(sc.Text())
+	if err != nil {
 		return
 	}
 
@@ -78,7 +87,7 @@ func getBoundaryCondition(sc *bufio.Scanner) (parentType string, parent string, 
 		case "Interval":
 			hg.TimeInterval = rightofEquals(sc.Text())
 			bc.Data = &hg
-		case "Flow Hydrograph":
+		case "Flow Hydrograph", "Precipitation Hydrograph":
 			bc.Type = loe
 			numVals, innerErr := strconv.Atoi(strings.TrimSpace(rightofEquals(line)))
 			if innerErr != nil {
@@ -86,8 +95,7 @@ func getBoundaryCondition(sc *bufio.Scanner) (parentType string, parent string, 
 				return
 			}
 			if numVals == 0 {
-				hg.TimeInterval = "" // time interval does not have any value without time series
-				return
+				break
 			}
 			series, innerErr := seriesFromTextBlock(sc, numVals, 80, 8)
 			if innerErr != nil {
@@ -171,7 +179,7 @@ func getUnsteadyData(fd *ForcingData, fs filestore.FileStore, flowFilePath strin
 			}
 		}
 
-		// if a new RAS element is encountered during the above switch statement, scanning again will skip that element, therefore skip scan
+		// if a new RAS element is encountered during the functions call, scanning again will skip that element, therefore skip scan
 		if skipScan == false {
 			eof = !sc.Scan()
 			if err := sc.Err(); err != nil {

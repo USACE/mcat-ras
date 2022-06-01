@@ -31,8 +31,8 @@ type BoundaryCondition struct {
 type Hydrograph struct {
 	TimeInterval       string    `json:"time_interval,omitempty"`
 	Values             []float64 `json:"values,omitempty"`
-	UseDSS             bool      `json:"use_dss,omitempty"`               // potential issue: UseDSS will have false by default
-	UseFixedStart      bool      `json:"fixed_start,omitempty"`           // potential issue: UseFixedStart will have false by default
+	UseDSS             bool      `json:"use_dss"`
+	UseFixedStart      bool      `json:"fixed_start"`
 	FixedStartDateTime *DateTime `json:"fixed_start_date_time,omitempty"` // pointer to have zero value, so that omitempty can work
 }
 
