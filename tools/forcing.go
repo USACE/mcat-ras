@@ -27,9 +27,10 @@ type BoundaryCondition struct {
 }
 
 // Hydrograph Data.
-// Can be Flow, Stage, Precipitation, or Gate Opening Hydrograph.
+// Can be Flow, Stage, Precipitation, Uniform Lateral Inflow, Lateral Inflow, Ground Water Interflow, or Gate Opening Hydrograph.
 type Hydrograph struct {
 	TimeInterval       string    `json:"time_interval,omitempty"`
+	EndRS              string    `json:"flow_distribution_last_RS,omitempty"` // flow will be distributed from RS to EndRS. Valid for Reaches with Uniform Lateral Inflow or Groundwater Interflow
 	Values             []float64 `json:"values,omitempty"`
 	UseDSS             bool      `json:"use_dss"`
 	UseFixedStart      bool      `json:"fixed_start"`

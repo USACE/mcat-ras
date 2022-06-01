@@ -29,12 +29,13 @@ type UnsteadyBoundaryConditions struct {
 }
 
 // Parse Boundary Condition's header.
-func parseBCHeader(line string) (parentType string, parent string, bc BoundaryCondition, err error) {
+func parseBCHeader(line string) (parentType string, parent string, flowEndRS string, bc BoundaryCondition, err error) {
 	bcArray := strings.Split(rightofEquals(line), ",")
 	if strings.TrimSpace(bcArray[0]) != "" {
 		parent = fmt.Sprintf("%s - %s", strings.TrimSpace(bcArray[0]), strings.TrimSpace(bcArray[1]))
 		parentType = "Reach"
 		bc.RS = strings.TrimSpace(bcArray[2])
+		flowEndRS = strings.TrimSpace(bcArray[3])
 	} else if strings.TrimSpace(bcArray[4]) != "" {
 		parent = strings.TrimSpace(bcArray[4])
 		parentType = "Connection"
@@ -62,12 +63,15 @@ func getBoundaryCondition(sc *bufio.Scanner) (parentType string, parent string, 
 	// e.g. name of the river - reach, or name of Storage Area
 
 	// Get Parent, Name, and Location of Boundary Condition
-	parentType, parent, bc, err = parseBCHeader(sc.Text())
+	parentType, parent, flowEndRS, bc, err := parseBCHeader(sc.Text())
 	if err != nil {
 		return
 	}
 
 	hg := Hydrograph{}
+	if flowEndRS != "" {
+		hg.EndRS = flowEndRS
+	}
 
 	// Get type and data of boundary condition
 	for sc.Scan() {
@@ -87,7 +91,7 @@ func getBoundaryCondition(sc *bufio.Scanner) (parentType string, parent string, 
 		case "Interval":
 			hg.TimeInterval = rightofEquals(sc.Text())
 			bc.Data = &hg
-		case "Flow Hydrograph", "Precipitation Hydrograph":
+		case "Flow Hydrograph", "Precipitation Hydrograph", "Uniform Lateral Inflow Hydrograph", "Lateral Inflow Hydrograph", "Ground Water Interflow":
 			bc.Type = loe
 			numVals, innerErr := strconv.Atoi(strings.TrimSpace(rightofEquals(line)))
 			if innerErr != nil {
