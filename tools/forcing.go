@@ -29,17 +29,17 @@ type BoundaryCondition struct {
 // Hydrograph Data.
 // Can be Flow, Stage, Precipitation, Uniform Lateral Inflow, Lateral Inflow, Ground Water Interflow, or Gate Opening Hydrograph.
 type Hydrograph struct {
-	TimeInterval       string    `json:"time_interval,omitempty"`
-	EndRS              string    `json:"flow_distribution_last_RS,omitempty"` // flow will be distributed from RS to EndRS. Valid for Reaches with Uniform Lateral Inflow or Groundwater Interflow
-	Values             []float64 `json:"values,omitempty"`
-	UseDSS             bool      `json:"use_dss"`
-	UseFixedStart      bool      `json:"fixed_start"`
-	FixedStartDateTime *DateTime `json:"fixed_start_date_time,omitempty"` // pointer to have zero value, so that omitempty can work
+	TimeInterval       string      `json:"time_interval,omitempty"`
+	EndRS              string      `json:"flow_distribution_last_RS,omitempty"` // flow will be distributed from RS to EndRS. Valid for Reaches with Uniform Lateral Inflow or Groundwater Interflow
+	Values             interface{} `json:"values,omitempty"`
+	UseDSS             bool        `json:"use_dss"`
+	UseFixedStart      bool        `json:"fixed_start"`
+	FixedStartDateTime *DateTime   `json:"fixed_start_date_time,omitempty"` // pointer to have zero value, so that omitempty can work
 }
 
 type DateTime struct {
 	Date  string `json:"date,omitempty"`
-	Hours int    `json:"hours,omitempty"`
+	Hours string `json:"hours,omitempty"` // should not be int/float or else 0015 hours will become 15 hours
 }
 
 // Rating Curve Data Pair

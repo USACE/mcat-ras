@@ -64,35 +64,6 @@ func checkUnitConsistency(modelUnits string, sourceCRS string) error {
 	return errors.New("Unable to check unit consistency, could not identify the coordinate reference system's units")
 }
 
-func dataPairsfromTextBlock(sc *bufio.Scanner, nPairs int, colWidth int, valueWidth int) ([][2]float64, error) {
-	var stride int = valueWidth * 2
-	pairs := [][2]float64{}
-out:
-	for sc.Scan() {
-		line := sc.Text()
-		for s := 0; s < colWidth; {
-			if len(line) > s {
-				val1, err := parseFloat(strings.TrimSpace(line[s:s+valueWidth]), 64)
-				if err != nil {
-					return pairs, errors.Wrap(err, 0)
-				}
-				val2, err := parseFloat(strings.TrimSpace(line[s+valueWidth:s+stride]), 64)
-				if err != nil {
-					return pairs, errors.Wrap(err, 0)
-				}
-				pairs = append(pairs, [2]float64{val1, val2})
-				if len(pairs) == nPairs {
-					break out
-				}
-			} else {
-				break
-			}
-			s += stride
-		}
-	}
-	return pairs, nil
-}
-
 func getDataPairsfromTextBlock(nDataPairsLine string, sc *bufio.Scanner, colWidth int, valueWidth int) ([][2]float64, error) {
 	pairs := [][2]float64{}
 	for sc.Scan() {

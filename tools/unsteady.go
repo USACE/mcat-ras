@@ -91,7 +91,7 @@ func getBoundaryCondition(sc *bufio.Scanner) (parentType string, parent string, 
 		case "Interval":
 			hg.TimeInterval = rightofEquals(sc.Text())
 			bc.Data = &hg
-		case "Flow Hydrograph", "Precipitation Hydrograph", "Uniform Lateral Inflow Hydrograph", "Lateral Inflow Hydrograph", "Ground Water Interflow":
+		case "Flow Hydrograph", "Precipitation Hydrograph", "Uniform Lateral Inflow Hydrograph", "Lateral Inflow Hydrograph", "Ground Water Interflow", "Stage Hydrograph":
 			bc.Type = loe
 			numVals, innerErr := strconv.Atoi(strings.TrimSpace(rightofEquals(line)))
 			if innerErr != nil {
@@ -102,6 +102,22 @@ func getBoundaryCondition(sc *bufio.Scanner) (parentType string, parent string, 
 				break
 			}
 			series, innerErr := seriesFromTextBlock(sc, numVals, 80, 8)
+			if innerErr != nil {
+				err = innerErr
+				return
+			}
+			hg.Values = series
+		case "Stage and Flow Hydrograph":
+			bc.Type = loe
+			numPairs, innerErr := strconv.Atoi(strings.TrimSpace(rightofEquals(line)))
+			if innerErr != nil {
+				err = innerErr
+				return
+			}
+			if numPairs == 0 {
+				break
+			}
+			series, innerErr := dataPairsfromTextBlock(sc, numPairs, 80, 8)
 			if innerErr != nil {
 				err = innerErr
 				return
@@ -122,12 +138,7 @@ func getBoundaryCondition(sc *bufio.Scanner) (parentType string, parent string, 
 			if len(fsdt[0]) > 0 {
 				hg.FixedStartDateTime = &DateTime{}
 				hg.FixedStartDateTime.Date = fsdt[0]
-				hours, innerErr := strconv.Atoi(fsdt[1])
-				if innerErr != nil {
-					err = innerErr
-					return
-				}
-				hg.FixedStartDateTime.Hours = hours
+				hg.FixedStartDateTime.Hours = fsdt[1]
 			}
 		}
 	}
