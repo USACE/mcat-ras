@@ -90,9 +90,9 @@ func getBoundaryCondition(sc *bufio.Scanner) (parentType string, parent string, 
 			return
 		case "Interval":
 			hg.TimeInterval = rightofEquals(sc.Text())
-			bc.Data = &hg
 		case "Flow Hydrograph", "Precipitation Hydrograph", "Uniform Lateral Inflow Hydrograph", "Lateral Inflow Hydrograph", "Ground Water Interflow", "Stage Hydrograph":
 			bc.Type = loe
+			bc.Data = &hg
 			numVals, innerErr := strconv.Atoi(strings.TrimSpace(rightofEquals(line)))
 			if innerErr != nil {
 				err = innerErr
@@ -123,6 +123,9 @@ func getBoundaryCondition(sc *bufio.Scanner) (parentType string, parent string, 
 				return
 			}
 			hg.Values = series
+		case "Rating Curve":
+			bc.Type = loe
+
 		case "Use DSS":
 			udss := strings.TrimSpace(rightofEquals(line))
 			if udss == "True" {

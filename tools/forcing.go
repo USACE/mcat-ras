@@ -42,11 +42,17 @@ type DateTime struct {
 	Hours string `json:"hours,omitempty"` // should not be int/float or else 0015 hours will become 15 hours
 }
 
-// Rating Curve Data Pair
-type RatingCurveDataPair struct {
-	Stage     float64 `json:"stage"`
-	Elevation float64 `json:"elevation"`
+// Rating Curve
+type RatingCurve struct {
+	Values [][2]float64 `json:"values,omitempty"`
+	UseDSS bool         `json:"use_dss"`
 }
+
+// // Rating Curve Data Pair
+// type RatingCurveDataPair struct {
+// 	Stage float64 `json:"stage"`
+// 	Flow  float64 `json:"flow"`
+// }
 
 // Elevation Controlled Gates Data.
 type ElevControlGates struct {
