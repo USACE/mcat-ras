@@ -7,7 +7,6 @@ import (
 	"math"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/USACE/filestore"
@@ -62,25 +61,6 @@ func checkUnitConsistency(modelUnits string, sourceCRS string) error {
 		return errors.New("The unit system of the model and coordinate reference system are inconsistent")
 	}
 	return errors.New("Unable to check unit consistency, could not identify the coordinate reference system's units")
-}
-
-func getDataPairsfromTextBlock(nDataPairsLine string, sc *bufio.Scanner, colWidth int, valueWidth int) ([][2]float64, error) {
-	pairs := [][2]float64{}
-	for sc.Scan() {
-		line := sc.Text()
-		if strings.HasPrefix(line, nDataPairsLine) {
-			nPairs, err := strconv.Atoi(rightofEquals(line))
-			if err != nil {
-				return pairs, errors.Wrap(err, 0)
-			}
-			pairs, err = dataPairsfromTextBlock(sc, nPairs, colWidth, valueWidth)
-			if err != nil {
-				return pairs, errors.Wrap(err, 0)
-			}
-			break
-		}
-	}
-	return pairs, nil
 }
 
 // distance returns the distance along a straight line in euclidean space

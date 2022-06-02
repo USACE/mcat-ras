@@ -160,3 +160,30 @@ out:
 	}
 	return pairs, nil
 }
+
+// Returns a paired data series.
+// Gets data from next Paired Data Block encountered in HEC-RAS files.
+// Returns at the successful parsing or at the end of the file.
+func getDataPairsfromTextBlock(nDataPairsLine string, sc *bufio.Scanner, colWidth int, valueWidth int) ([][2]float64, error) {
+	pairs := [][2]float64{}
+	for {
+		line := sc.Text()
+		if strings.HasPrefix(line, nDataPairsLine) {
+			nPairs, err := strconv.Atoi(rightofEquals(line))
+			if err != nil {
+				return pairs, errors.Wrap(err, 0)
+			}
+			pairs, err = dataPairsfromTextBlock(sc, nPairs, colWidth, valueWidth)
+			if err != nil {
+				return pairs, errors.Wrap(err, 0)
+			}
+			break
+		}
+		if !sc.Scan() {
+			break
+		}
+
+		// to do: there should be a check here to see it has not enocuntered new element
+	}
+	return pairs, nil
+}

@@ -72,6 +72,7 @@ func getBoundaryCondition(sc *bufio.Scanner) (parentType string, parent string, 
 	if flowEndRS != "" {
 		hg.EndRS = flowEndRS
 	}
+	rc := RatingCurve{}
 
 	// Get type and data of boundary condition
 	for sc.Scan() {
@@ -107,30 +108,39 @@ func getBoundaryCondition(sc *bufio.Scanner) (parentType string, parent string, 
 				return
 			}
 			hg.Values = series
+
 		case "Stage and Flow Hydrograph":
 			bc.Type = loe
-			numPairs, innerErr := strconv.Atoi(strings.TrimSpace(rightofEquals(line)))
-			if innerErr != nil {
+			bc.Data = &hg
+			data, innerErr := getDataPairsfromTextBlock("Stage and Flow Hydrograph", sc, 80, 8)
+
+			if err != nil {
 				err = innerErr
 				return
 			}
-			if numPairs == 0 {
-				break
-			}
-			series, innerErr := dataPairsfromTextBlock(sc, numPairs, 80, 8)
-			if innerErr != nil {
-				err = innerErr
-				return
-			}
-			hg.Values = series
+			hg.Values = data
+
 		case "Rating Curve":
+			bc.Data = &rc
 			bc.Type = loe
+			series, innerErr := getDataPairsfromTextBlock("Rating Curve", sc, 80, 8)
+
+			if innerErr != nil {
+				err = innerErr
+				return
+			}
+			rc.Values = series
 
 		case "Use DSS":
 			udss := strings.TrimSpace(rightofEquals(line))
 			if udss == "True" {
-				hg.UseDSS = true
+				if bc.Type == "RatingCurve" {
+					rc.UseDSS = true
+				} else {
+					hg.UseDSS = true
+				}
 			}
+
 		case "Use Fixed Start Time":
 			ufs := strings.TrimSpace(rightofEquals(line))
 			if ufs == "True" {
