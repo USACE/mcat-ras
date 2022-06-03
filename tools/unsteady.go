@@ -55,82 +55,78 @@ func parseBCHeader(line string) (parentType string, parent string, flowEndRS str
 	return
 }
 
-// Get Boundary Condition's data.
-// Advances the given scanner.
-// Returns if new RAS element is encountered or all necessary data is obtained.
-func getBoundaryCondition(sc *bufio.Scanner) (parentType string, parent string, bc BoundaryCondition, skipScan bool, err error) {
-	// either Reaches, Connections, Areas, or Pump Stations
-	// e.g. name of the river - reach, or name of Storage Area
+// Return a RatingCurve object, bool skipScan, error encountered
+func getRatingCurveData(sc *bufio.Scanner) (RatingCurve, bool, error) {
+	rc := RatingCurve{}
 
-	// Get Parent, Name, and Location of Boundary Condition
-	parentType, parent, flowEndRS, bc, err := parseBCHeader(sc.Text())
-	if err != nil {
-		return
+	series, innerErr := getDataPairsfromTextBlock("Rating Curve", sc, 80, 8)
+
+	if innerErr != nil {
+		return rc, false, innerErr
 	}
+	rc.Values = series
 
+	for sc.Scan() {
+		line := sc.Text()
+		loe := leftofEquals(line)
+
+		if stringInSlice(loe, forcingElementsPrefix[:]) {
+			return rc, true, nil
+		}
+
+		if strings.HasPrefix(line, "Use DSS") {
+			if rightofEquals(line) == "True" {
+				rc.UseDSS = true
+			}
+			return rc, false, nil
+		}
+	}
+	return rc, false, nil
+}
+
+// Return a Hydrograph object, bool skipScan, error encountered
+func getHydrographData(sc *bufio.Scanner, hydrographType string, pairedData bool, flowEndRS string) (Hydrograph, bool, error) {
 	hg := Hydrograph{}
+
 	if flowEndRS != "" {
 		hg.EndRS = flowEndRS
 	}
 
-	// Get type and data of boundary condition
+	if pairedData { // Stage and Flow Hydrograph
+		series, innerErr := getDataPairsfromTextBlock(hydrographType, sc, 80, 8)
+
+		if innerErr != nil {
+			return hg, false, innerErr
+		}
+		hg.Values = series
+	} else {
+		numVals, innerErr := strconv.Atoi(strings.TrimSpace(rightofEquals(sc.Text())))
+		if innerErr != nil {
+			return hg, false, innerErr
+		}
+
+		series, innerErr := seriesFromTextBlock(sc, numVals, 80, 8)
+
+		if innerErr != nil {
+			return hg, false, innerErr
+		}
+		hg.Values = series
+	}
+
 	for sc.Scan() {
 		line := sc.Text()
 		loe := leftofEquals(line)
+
 		if stringInSlice(loe, forcingElementsPrefix[:]) {
-			skipScan = true // a new HEC RAS element has been encountered, skip next scan and return
-			return
+			return hg, true, nil
 		}
 
 		switch loe {
-		case "Friction Slope":
-			bc.Type = "Normal Depth"
-			slope, _ := parseFloat(strings.TrimSpace(strings.Split(rightofEquals(line), ",")[0]), 64)
-			bc.Data = map[string]float64{"Friction Slope": slope}
-			return
-		case "Interval":
-			hg.TimeInterval = rightofEquals(sc.Text())
-		case "Flow Hydrograph", "Precipitation Hydrograph", "Uniform Lateral Inflow Hydrograph", "Lateral Inflow Hydrograph", "Ground Water Interflow", "Stage Hydrograph":
-			bc.Type = loe
-			bc.Data = &hg
-			numVals, innerErr := strconv.Atoi(strings.TrimSpace(rightofEquals(line)))
-			if innerErr != nil {
-				err = innerErr
-				return
-			}
-			if numVals == 0 {
-				break
-			}
-			series, innerErr := seriesFromTextBlock(sc, numVals, 80, 8)
-			if innerErr != nil {
-				err = innerErr
-				return
-			}
-			hg.Values = series
-		case "Stage and Flow Hydrograph":
-			bc.Type = loe
-			numPairs, innerErr := strconv.Atoi(strings.TrimSpace(rightofEquals(line)))
-			if innerErr != nil {
-				err = innerErr
-				return
-			}
-			if numPairs == 0 {
-				break
-			}
-			series, innerErr := dataPairsfromTextBlock(sc, numPairs, 80, 8)
-			if innerErr != nil {
-				err = innerErr
-				return
-			}
-			hg.Values = series
-		case "Rating Curve":
-			bc.Type = loe
-
 		case "Use DSS":
-			udss := strings.TrimSpace(rightofEquals(line))
-			if udss == "True" {
+			if rightofEquals(line) == "True" {
 				hg.UseDSS = true
 			}
+
 		case "Use Fixed Start Time":
 			ufs := strings.TrimSpace(rightofEquals(line))
 			if ufs == "True" {
@@ -146,7 +142,79 @@ func getBoundaryCondition(sc *bufio.Scanner) (parentType string, parent string, 
 		}
 	}
 
-	return parentType, parent, bc, false, nil
+	return hg, true, nil
+}
+
+// Get Boundary Condition's data.
+// Advances the given scanner.
+// Returns if new RAS element is encountered or all necessary data is obtained.
+func getBoundaryCondition(sc *bufio.Scanner) (parentType string, parent string, bc BoundaryCondition, skipScan bool, err error) {
+	// either Reaches, Connections, Areas, or Pump Stations
+	// e.g. name of the river - reach, or name of Storage Area
+
+	// Get Parent, Name, and Location of Boundary Condition
+	parentType, parent, flowEndRS, bc, err := parseBCHeader(sc.Text())
+	if err != nil {
+		return
+	}
+
+	// Get type and data of boundary condition
+	for sc.Scan() {
+		line := sc.Text()
+		loe := leftofEquals(line)
+		if stringInSlice(loe, forcingElementsPrefix[:]) {
+			skipScan = true // a new HEC RAS element has been encountered, skip next scan and return
+			return
+		}
+
+		// findout type of BC
+		switch loe {
+		case "Friction Slope":
+			bc.Type = "Normal Depth"
+			slope, _ := parseFloat(strings.TrimSpace(strings.Split(rightofEquals(line), ",")[0]), 64)
+			bc.Data = map[string]float64{"Friction Slope": slope}
+			return
+		// case "Interval":
+		// 	hg.TimeInterval = rightofEquals(sc.Text())
+		case "Flow Hydrograph", "Precipitation Hydrograph", "Uniform Lateral Inflow Hydrograph", "Lateral Inflow Hydrograph", "Ground Water Interflow", "Stage Hydrograph":
+			bc.Type = loe
+			hg, ss, innerErr := getHydrographData(sc, loe, false, flowEndRS)
+			skipScan = ss
+			if innerErr != nil {
+				err = innerErr
+				return
+			}
+			bc.Data = hg
+			return
+
+		case "Stage and Flow Hydrograph":
+			bc.Type = loe
+			hg, ss, innerErr := getHydrographData(sc, loe, true, flowEndRS)
+			skipScan = ss
+
+			if err != nil {
+				err = innerErr
+				return
+			}
+			bc.Data = hg
+			return
+
+		case "Rating Curve":
+			rc, ss, innerErr := getRatingCurveData(sc)
+			skipScan = ss
+
+			if innerErr != nil {
+				err = innerErr
+				return
+			}
+
+			bc.Data = rc
+			bc.Type = loe
+			return
+		}
+	}
+
+	return
 }
 
 // Get Forcing Data from unsteady flow file.
@@ -172,9 +240,9 @@ func getUnsteadyData(fd *ForcingData, fs filestore.FileStore, flowFilePath strin
 	if err := sc.Err(); err != nil {
 		return err
 	}
-	skipScan := false
 
-	for eof == false {
+	for !eof {
+		skipScan := false
 		line := sc.Text()
 
 		switch {
@@ -198,7 +266,7 @@ func getUnsteadyData(fd *ForcingData, fs filestore.FileStore, flowFilePath strin
 		}
 
 		// if a new RAS element is encountered during the functions call, scanning again will skip that element, therefore skip scan
-		if skipScan == false {
+		if !skipScan {
 			eof = !sc.Scan()
 			if err := sc.Err(); err != nil {
 				return err
