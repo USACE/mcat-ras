@@ -55,6 +55,36 @@ func parseBCHeader(line string) (parentType string, parent string, flowEndRS str
 	return
 }
 
+// Return a RatingCurve object
+// Error handling?
+func getRatingCurveData(sc *bufio.Scanner, rc *RatingCurve) (error, bool) {
+	series, innerErr := getDataPairsfromTextBlock("Rating Curve", sc, 80, 8)
+
+	if innerErr != nil {
+		return innerErr, false
+	}
+	rc.Values = series
+
+	for sc.Scan() {
+		line := sc.Text()
+		loe := leftofEquals(line)
+
+		switch loe {
+		case "Boundary Location":
+			return nil, true
+
+		case "Use DSS":
+			if rightofEquals(line) == "True" {
+				rc.UseDSS = true
+			}
+			return nil, false
+
+		}
+	}
+
+	return nil, false // no error, "Boundary Location" was not reached
+}
+
 // Get Boundary Condition's data.
 // Advances the given scanner.
 // Returns if new RAS element is encountered or all necessary data is obtained.
@@ -83,14 +113,15 @@ func getBoundaryCondition(sc *bufio.Scanner) (parentType string, parent string, 
 			return
 		}
 
+		// findout type of BC
 		switch loe {
 		case "Friction Slope":
 			bc.Type = "Normal Depth"
 			slope, _ := parseFloat(strings.TrimSpace(strings.Split(rightofEquals(line), ",")[0]), 64)
 			bc.Data = map[string]float64{"Friction Slope": slope}
 			return
-		case "Interval":
-			hg.TimeInterval = rightofEquals(sc.Text())
+		// case "Interval":
+		// 	hg.TimeInterval = rightofEquals(sc.Text())
 		case "Flow Hydrograph", "Precipitation Hydrograph", "Uniform Lateral Inflow Hydrograph", "Lateral Inflow Hydrograph", "Ground Water Interflow", "Stage Hydrograph":
 			bc.Type = loe
 			bc.Data = &hg
@@ -123,22 +154,22 @@ func getBoundaryCondition(sc *bufio.Scanner) (parentType string, parent string, 
 		case "Rating Curve":
 			bc.Data = &rc
 			bc.Type = loe
-			series, innerErr := getDataPairsfromTextBlock("Rating Curve", sc, 80, 8)
+			// a function that scan and updates RatingCurve object
+			// bc.Data = foobarfunc()
+
+			innerErr, skipLine := getRatingCurveData(sc, &rc)
 
 			if innerErr != nil {
 				err = innerErr
 				return
 			}
-			rc.Values = series
+
+			skipScan = skipLine
 
 		case "Use DSS":
 			udss := strings.TrimSpace(rightofEquals(line))
 			if udss == "True" {
-				if bc.Type == "RatingCurve" {
-					rc.UseDSS = true
-				} else {
-					hg.UseDSS = true
-				}
+				hg.UseDSS = true
 			}
 
 		case "Use Fixed Start Time":
