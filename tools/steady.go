@@ -3,7 +3,6 @@ package tools
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -13,7 +12,7 @@ import (
 )
 
 // These prefixes are used to determine the beginning and end of HEC-RAS elements
-var steadyElementsPrefix = [...]string{"River Rch & RM=", "Boundary for River Rch & Prof#="}
+var steadyElementsPrefix = [...]string{"River Rch & RM", "Boundary for River Rch & Prof#"}
 
 // map of steadyBoundaryConditionTypes
 var bcTypeMapping = map[string]string{
@@ -52,8 +51,15 @@ type StoAreaElevation struct {
 }
 
 // Get Number of Profiles
-func getNameNumProfiles(file *io.ReadCloser) (numProf int, names []string, err error) {
-	sc := bufio.NewScanner(*file)
+func getNameNumProfiles(fs filestore.FileStore, flowFilePath string) (numProf int, names []string, err error) {
+
+	file, err := fs.GetObject(flowFilePath)
+	if err != nil {
+		return numProf, names, errors.Wrap(err, 0)
+	}
+	defer file.Close()
+	sc := bufio.NewScanner(file)
+
 	for sc.Scan() {
 		line := sc.Text()
 		loe := leftofEquals(line)
@@ -63,29 +69,28 @@ func getNameNumProfiles(file *io.ReadCloser) (numProf int, names []string, err e
 			if err != nil {
 				return
 			}
-		} else if loe == "Number of Profiles" {
+		} else if loe == "Profile Names" {
 			names = strings.Split(rightofEquals(line), ",")
 		}
-		if numProf == len(names) {
+
+		if (numProf == len(names)) && (numProf > 0) { // no need to scan further
 			return
 		}
 	}
-	return numProf, names, errors.Errorf("Couldn't find number of profiles")
+	return numProf, names, errors.Errorf("Couldn't find number of profiles or Profile Names")
 }
 
 // Get HEC RAS Flow Files Title and Program Version.
 // Advances the given scanner.
 // Returns only when new element is encountered.
-func getFlowTitleVersion(sc *bufio.Scanner, elementsPrefix []string) (title string, version string, skipScan bool) {
+func getFlowTitleVersion(sc *bufio.Scanner, elementsPrefix []string) (title string, version string) {
 	for sc.Scan() {
 		line := sc.Text()
 		loe := leftofEquals(line)
 
 		if stringInSlice(loe, elementsPrefix) {
-			skipScan = true // a new HEC RAS element has been encountered, skip next scan and return
 			return
 		}
-
 		switch loe {
 		case "Flow Title":
 			title = strings.TrimSpace(rightofEquals(line))
@@ -113,6 +118,7 @@ func parseRFHeader(line string) (reach string, rs string, err error) {
 // Advances the given scanner.
 func getReachFlows(sc *bufio.Scanner, sd *SteadyData) error {
 
+	fmt.Println("getREachflow", len(sd.Profiles))
 	// Get Name, and Location of reach
 	reach, rs, err := parseRFHeader(sc.Text())
 	if err != nil {
@@ -123,6 +129,7 @@ func getReachFlows(sc *bufio.Scanner, sd *SteadyData) error {
 	for index, element := range series {
 		sd.Profiles[index].Flows[reach] = append(sd.Profiles[index].Flows[reach], RSFlow{rs, element})
 	}
+
 	return nil
 }
 
@@ -154,7 +161,7 @@ func getReachBCs(sc *bufio.Scanner, sd *SteadyData) (skipScan bool, err error) {
 		"Up": BoundaryCondition{},
 		"Dn": BoundaryCondition{},
 	}
-	sd.Profiles[profNum].BoundaryConditions[reach] = &bcs
+	sd.Profiles[profNum-1].BoundaryConditions[reach] = &bcs
 
 	// Get type and data of boundary condition
 	for sc.Scan() {
@@ -218,29 +225,35 @@ func getSteadyData(fd *ForcingData, fs filestore.FileStore, flowFilePath string)
 	}
 	defer file.Close()
 
-	numProf, names, err := getNameNumProfiles(&file)
+	// not passing the same scanner because number of Profiles, and names
+	// must be found first before anything else can be done, and they can be anywhere
+	// in .f file
+	numProf, names, err := getNameNumProfiles(fs, flowFilePath)
 	if err != nil {
 		return errors.Wrap(err, 0)
 	}
+
 	sd := SteadyData{
 		Profiles: make([]Profile, numProf),
 	}
 	for index, element := range names {
 		sd.Profiles[index].Name = element
+		sd.Profiles[index].Flows = make(map[string][]RSFlow)
+		sd.Profiles[index].BoundaryConditions = make(map[string]*map[string]BoundaryCondition)
 	}
 
 	sc := bufio.NewScanner(file)
-	eof := !sc.Scan()
 	if err := sc.Err(); err != nil {
 		return err
 	}
-	skipScan := false
 
-	sd.FlowTitle, sd.ProgramVersion, skipScan = getFlowTitleVersion(sc, steadyElementsPrefix[:])
+	sd.FlowTitle, sd.ProgramVersion = getFlowTitleVersion(sc, steadyElementsPrefix[:])
 
-	for !eof {
+	eof := false
+	for eof == false {
+		skipScan := false
 		line := sc.Text()
-
+		fmt.Println(line)
 		switch {
 		case strings.HasPrefix(line, "River Rch & RM="):
 			err = getReachFlows(sc, &sd)
@@ -259,6 +272,8 @@ func getSteadyData(fd *ForcingData, fs filestore.FileStore, flowFilePath string)
 			}
 		}
 	}
+	fmt.Println(sd)
 	fd.Steady[flowFileName] = sd
+
 	return nil
 }

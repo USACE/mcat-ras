@@ -1,7 +1,6 @@
 package tools
 
 import (
-	"fmt"
 	"path/filepath"
 
 	"github.com/USACE/filestore"
@@ -57,7 +56,6 @@ func GetForcingData(fd *ForcingData, fs filestore.FileStore, flowFilePath string
 	extPrefix := filepath.Ext(flowFilePath)[0:2]
 
 	if extPrefix == ".f" {
-		fmt.Sprintf("found steady flow file %s", flowFilePath)
 		err = getSteadyData(fd, fs, flowFilePath)
 	} else if extPrefix == ".u" {
 		err = getUnsteadyData(fd, fs, flowFilePath)

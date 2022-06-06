@@ -45,7 +45,10 @@ func ForcingData(ac *config.APIConfig) echo.HandlerFunc {
 }
 
 func forcingData(definitionFile string, fs *filestore.FileStore) (tools.ForcingData, error) {
-	fd := tools.ForcingData{Unsteady: make(map[string]tools.UnsteadyData)}
+	fd := tools.ForcingData{
+		Steady:   make(map[string]tools.SteadyData),
+		Unsteady: make(map[string]tools.UnsteadyData),
+	}
 
 	mfiles, err := modFiles(definitionFile, *fs)
 	if err != nil {
