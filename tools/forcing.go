@@ -12,7 +12,7 @@ var forcingElementsPrefix = [...]string{"Boundary Location"}
 
 // Forcing Data ...
 type ForcingData struct {
-	Steady        map[string][]Profile    `json:"Steady,omitempty"`
+	Steady        map[string]SteadyData   `json:"Steady,omitempty"`
 	QuasiUnsteady interface{}             `json:"QuasiUnsteady,omitempty"` // to be implemented
 	Unsteady      map[string]UnsteadyData `json:"Unsteady,omitempty"`
 }
@@ -48,12 +48,6 @@ type RatingCurve struct {
 	UseDSS bool         `json:"use_dss"`
 }
 
-// // Rating Curve Data Pair
-// type RatingCurveDataPair struct {
-// 	Stage float64 `json:"stage"`
-// 	Flow  float64 `json:"flow"`
-// }
-
 // Elevation Controlled Gates Data.
 type ElevControlGates struct {
 }
@@ -64,7 +58,7 @@ func GetForcingData(fd *ForcingData, fs filestore.FileStore, flowFilePath string
 
 	if extPrefix == ".f" {
 		fmt.Sprintf("found steady flow file %s", flowFilePath)
-		// err = getSteadyData(fd, fs, flowFilePath)
+		err = getSteadyData(fd, fs, flowFilePath)
 	} else if extPrefix == ".u" {
 		err = getUnsteadyData(fd, fs, flowFilePath)
 	} else if extPrefix == ".q" {
