@@ -29,7 +29,7 @@ type UnsteadyBoundaryConditions struct {
 }
 
 // Parse Boundary Condition's header.
-func parseBCHeader(line string) (parentType string, parent string, flowEndRS string, bc BoundaryCondition, err error) {
+func parseUnsteadyBCHeader(line string) (parentType string, parent string, flowEndRS string, bc BoundaryCondition, err error) {
 	bcArray := strings.Split(rightofEquals(line), ",")
 	if strings.TrimSpace(bcArray[0]) != "" {
 		parent = fmt.Sprintf("%s - %s", strings.TrimSpace(bcArray[0]), strings.TrimSpace(bcArray[1]))
@@ -153,7 +153,7 @@ func getBoundaryCondition(sc *bufio.Scanner) (parentType string, parent string, 
 	// e.g. name of the river - reach, or name of Storage Area
 
 	// Get Parent, Name, and Location of Boundary Condition
-	parentType, parent, flowEndRS, bc, err := parseBCHeader(sc.Text())
+	parentType, parent, flowEndRS, bc, err := parseUnsteadyBCHeader(sc.Text())
 	if err != nil {
 		return
 	}
