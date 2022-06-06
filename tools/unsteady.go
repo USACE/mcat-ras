@@ -104,15 +104,15 @@ func getHydrographData(sc *bufio.Scanner, hydrographType string, pairedData bool
 		if innerErr != nil {
 			return hg, false, innerErr
 		}
+		if numVals != 0 {
+			series, innerErr := seriesFromTextBlock(sc, numVals, 80, 8)
 
-		series, innerErr := seriesFromTextBlock(sc, numVals, 80, 8)
-
-		if innerErr != nil {
-			return hg, false, innerErr
+			if innerErr != nil {
+				return hg, false, innerErr
+			}
+			hg.Values = series
 		}
-		hg.Values = series
 	}
-
 	for sc.Scan() {
 		line := sc.Text()
 		loe := leftofEquals(line)
@@ -248,6 +248,7 @@ func getUnsteadyData(fd *ForcingData, fs filestore.FileStore, flowFilePath strin
 		switch {
 		case strings.HasPrefix(line, "Boundary Location="):
 			parentType, parent, bc, ss, err := getBoundaryCondition(sc)
+
 			skipScan = ss
 			if err != nil {
 				return errors.Wrap(err, 0)
