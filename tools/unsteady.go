@@ -145,6 +145,74 @@ func getHydrographData(sc *bufio.Scanner, hydrographType string, pairedData bool
 	return hg, true, nil
 }
 
+func getGateData(sc *bufio.Scanner, flowEndRS string) (map[int]Hydrograph, bool, error) {
+	var gates = make(map[int]Hydrograph)
+	for {
+		line := sc.Text()
+		if strings.HasPrefix(line, "Boundary Location=") {
+			return gates, true, nil
+		}
+
+		loe := leftofEquals(line)
+		if loe == "Gate Name" {
+			gate_number, innerErr := strconv.Atoi(strings.TrimSpace(line[16:]))
+			if innerErr != nil {
+				return gates, false, innerErr
+			}
+			var hg Hydrograph
+			if flowEndRS != "" {
+				hg.EndRS = flowEndRS
+			}
+
+			sc.Scan()
+			for ; ; sc.Scan() {
+				line = sc.Text()
+				loe = leftofEquals(line)
+
+				switch loe {
+				case "Gate Use DSS":
+					if rightofEquals(line) == "True" {
+						hg.UseDSS = true
+					}
+
+				case "Gate Use Fixed Start Time":
+					ufs := strings.TrimSpace(rightofEquals(line))
+					if ufs == "True" {
+						hg.UseFixedStart = true
+					}
+				case "Gate Fixed Start Date/Time":
+					fsdt := strings.Split(rightofEquals(line), ",")
+					if len(fsdt[0]) > 0 {
+						hg.FixedStartDateTime = &DateTime{}
+						hg.FixedStartDateTime.Date = fsdt[0]
+						hg.FixedStartDateTime.Hours = fsdt[1]
+					}
+				}
+				if loe == "Gate Openings" {
+					numValues, innerErr := strconv.Atoi(strings.TrimSpace(rightofEquals(sc.Text())))
+					if innerErr != nil {
+						return gates, false, innerErr
+					}
+					if numValues != 0 {
+						data, innerErr := seriesFromTextBlock(sc, numValues, 80, 8)
+						if innerErr != nil {
+							return gates, false, innerErr
+						}
+						hg.Values = data
+					}
+					gates[gate_number] = hg
+					sc.Scan()
+					break
+				}
+
+			}
+
+		}
+
+	}
+
+}
+
 // Get Boundary Condition's data.
 // Advances the given scanner.
 // Returns if new RAS element is encountered or all necessary data is obtained.
@@ -163,6 +231,9 @@ func getBoundaryCondition(sc *bufio.Scanner) (parentType string, parent string, 
 		line := sc.Text()
 		loe := leftofEquals(line)
 		if stringInSlice(loe, forcingElementsPrefix[:]) {
+			if bc.Type == "" {
+				bc.Type = "UNKNOWN TYPE"
+			}
 			skipScan = true // a new HEC RAS element has been encountered, skip next scan and return
 			return
 		}
@@ -187,8 +258,12 @@ func getBoundaryCondition(sc *bufio.Scanner) (parentType string, parent string, 
 			bc.Data = hg
 			return
 
-		case "Stage and Flow Hydrograph":
-			bc.Type = loe
+		case "Stage and Flow Hydrograph", "Observed Stage and Flow Hydrograph":
+			if loe == "Observed Stage and Flow Hydrograph" {
+				bc.Type = "IB Stage and Flow Hydrograph"
+			} else {
+				bc.Type = loe
+			}
 			hg, ss, innerErr := getHydrographData(sc, loe, true, flowEndRS)
 			skipScan = ss
 
@@ -211,7 +286,26 @@ func getBoundaryCondition(sc *bufio.Scanner) (parentType string, parent string, 
 			bc.Data = rc
 			bc.Type = loe
 			return
+		case "Gate Name":
+			gate, ss, innerErr := getGateData(sc, flowEndRS)
+			skipScan = ss
+
+			if innerErr != nil {
+				err = innerErr
+				return
+			}
+
+			bc.Data = gate
+			bc.Type = "Gate Openings"
+
+			return
+
+		case "Rule Operation", "Rule Expression":
+			bc.Type = "Rules"
+
+			return
 		}
+
 	}
 
 	return
