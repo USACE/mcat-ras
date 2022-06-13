@@ -13,18 +13,19 @@ import (
 
 // Unsteady Data
 type UnsteadyData struct {
-	// omitting empty here because null InitialConditions maybe assumed as no initial condition exist, while in fact it may or may not exist until implemented
-	InitialConditions  interface{}                `json:",omitempty"` // to be implemented
-	BoundaryConditions UnsteadyBoundaryConditions `json:",omitempty"`
-	MeterologicalData  interface{}                `json:",omitempty"` // to be implemented
-	ObservedData       interface{}                `json:",omitempty"` // to be implemented // added in version 6.2
+	InitialConditions  interface{} // to be implemented
+	BoundaryConditions UnsteadyBoundaryConditions
+	MeterologicalData  interface{} // to be implemented
+	ObservedData       interface{} // to be implemented // added in version 6.2
 }
 
 // Unsteady Boundary Conditions
 type UnsteadyBoundaryConditions struct {
-	Reaches      map[string][]BoundaryCondition
-	Areas        map[string][]BoundaryCondition
-	Connections  map[string][]BoundaryCondition
+	// There can be many boundary conditions for the same element
+	Reaches     map[string][]BoundaryCondition
+	Areas       map[string][]BoundaryCondition
+	Connections map[string][]BoundaryCondition
+	// Only one boundary condition for each element in pumps
 	PumpStations map[string]BoundaryCondition
 }
 
@@ -248,7 +249,11 @@ func getBoundaryCondition(sc *bufio.Scanner) (parentType string, parent string, 
 		case "Interval":
 			timeInterval = rightofEquals(sc.Text())
 		case "Flow Hydrograph", "Precipitation Hydrograph", "Uniform Lateral Inflow Hydrograph", "Lateral Inflow Hydrograph", "Ground Water Interflow", "Stage Hydrograph":
-			bc.Type = loe
+			if loe == "Precipitation Hydrograph" {
+				bc.Type = "Precipitation"
+			} else {
+				bc.Type = loe
+			}
 			hg, ss, innerErr := getHydrographData(sc, loe, false, flowEndRS)
 			hg.TimeInterval = timeInterval
 			skipScan = ss
@@ -301,12 +306,17 @@ func getBoundaryCondition(sc *bufio.Scanner) (parentType string, parent string, 
 			bc.Type = "T. S. Gate Openings"
 			return
 
-		case "Rule Operation", "Rule Expression":
+		case "Rule Operation", "Rule Expression": // both are keywords for Rules BC
 			bc.Type = "Rules"
-
+			bc.Data = "Not Implemented"
 			return
-		}
 
+		case "Elev Controlled Gate", "Navigation Dam":
+			bc.Type = loe
+			bc.Data = "Not Implemented"
+			return
+
+		}
 	}
 
 	return
@@ -316,12 +326,15 @@ func getBoundaryCondition(sc *bufio.Scanner) (parentType string, parent string, 
 func getUnsteadyData(fd *ForcingData, fs filestore.FileStore, flowFilePath string) error {
 	flowFileName := filepath.Base(flowFilePath)
 	ud := UnsteadyData{
+		InitialConditions: "Not Implemented",
 		BoundaryConditions: UnsteadyBoundaryConditions{
 			Reaches:      make(map[string][]BoundaryCondition),
 			Areas:        make(map[string][]BoundaryCondition),
 			Connections:  make(map[string][]BoundaryCondition),
 			PumpStations: make(map[string]BoundaryCondition), // Unlike other features a pump cannot have multiple boundary conditions
 		},
+		MeterologicalData: "Not Implemented",
+		ObservedData:      "Not Implemented",
 	}
 
 	file, err := fs.GetObject(flowFilePath)
