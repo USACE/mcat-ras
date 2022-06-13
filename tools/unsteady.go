@@ -376,11 +376,13 @@ func getUnsteadyData(fd *ForcingData, fs filestore.FileStore, flowFilePath strin
 	defer file.Close()
 
 	sc := bufio.NewScanner(file)
-	eof := !sc.Scan()
 	if err := sc.Err(); err != nil {
 		return err
 	}
 
+	ud.FlowTitle, ud.ProgramVersion = getFlowTitleVersion(sc, unsteadyElementsPrefix[:])
+
+	eof := false
 	for !eof {
 		skipScan := false
 		line := sc.Text()

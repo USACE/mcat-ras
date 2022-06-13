@@ -3,7 +3,9 @@
 package tools
 
 import (
+	"bufio"
 	"path/filepath"
+	"strings"
 
 	"github.com/USACE/filestore"
 )
@@ -22,6 +24,27 @@ type BoundaryCondition struct {
 	Description string      `json:"description,omitempty"`
 	Type        string      `json:"type"`
 	Data        interface{} `json:"data"`
+}
+
+// Get HEC RAS Flow Files Title and Program Version.
+// Advances the given scanner.
+// Returns only when new element is encountered.
+func getFlowTitleVersion(sc *bufio.Scanner, elementsPrefix []string) (title string, version string) {
+	for sc.Scan() {
+		line := sc.Text()
+		loe := leftofEquals(line)
+
+		if stringInSlice(loe, elementsPrefix) {
+			return
+		}
+		switch loe {
+		case "Flow Title":
+			title = strings.TrimSpace(rightofEquals(line))
+		case "Program Version":
+			version = strings.TrimSpace(rightofEquals(line))
+		}
+	}
+	return
 }
 
 // Get Forcing Data from steady, unsteady or quasi-steady flow file.

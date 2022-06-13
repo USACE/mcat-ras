@@ -82,27 +82,6 @@ func getNameNumProfiles(fs filestore.FileStore, flowFilePath string) (numProf in
 	return numProf, names, errors.Errorf("Couldn't find number of profiles or Profile Names")
 }
 
-// Get HEC RAS Flow Files Title and Program Version.
-// Advances the given scanner.
-// Returns only when new element is encountered.
-func getFlowTitleVersion(sc *bufio.Scanner, elementsPrefix []string) (title string, version string) {
-	for sc.Scan() {
-		line := sc.Text()
-		loe := leftofEquals(line)
-
-		if stringInSlice(loe, elementsPrefix) {
-			return
-		}
-		switch loe {
-		case "Flow Title":
-			title = strings.TrimSpace(rightofEquals(line))
-		case "Program Version":
-			version = strings.TrimSpace(rightofEquals(line))
-		}
-	}
-	return
-}
-
 // Parse Boundary Condition's header.
 func parseRFHeader(line string) (reach string, rs string, err error) {
 	rfArray := strings.Split(rightofEquals(line), ",")
@@ -251,7 +230,7 @@ func getSteadyData(fd *ForcingData, fs filestore.FileStore, flowFilePath string)
 	sd.FlowTitle, sd.ProgramVersion = getFlowTitleVersion(sc, steadyElementsPrefix[:])
 
 	eof := false
-	for eof == false {
+	for !eof {
 		skipScan := false
 		line := sc.Text()
 
