@@ -56,8 +56,8 @@ func parseUnsteadyBCHeader(line string) (parentType string, parent string, flowE
 }
 
 // Get Rating Curve Boundary Condition Data
-func getRatingCurveData(sc *bufio.Scanner) (RatingCurve, bool, error) {
-	rc := RatingCurve{}
+// Returns at EOF or if new Unsteady element is encountered
+func getRatingCurveData(sc *bufio.Scanner) (rc RatingCurve, skipScan bool, err error) {
 
 	series, innerErr := getDataPairsfromTextBlock("Rating Curve", sc, 80, 8)
 
@@ -74,19 +74,23 @@ func getRatingCurveData(sc *bufio.Scanner) (RatingCurve, bool, error) {
 			return rc, true, nil
 		}
 
-		if strings.HasPrefix(line, "Use DSS") {
+		switch loe {
+		case "Use DSS":
 			if rightofEquals(line) == "True" {
 				rc.UseDSS = true
 			}
-			return rc, false, nil
+		case "DSS File":
+			rc.DSSFile = strings.TrimSpace(rightofEquals(sc.Text()))
+		case "DSS Path":
+			rc.DSSPath = strings.TrimSpace(rightofEquals(sc.Text()))
 		}
 	}
-	return rc, false, nil
+	return
 }
 
-// Return a Hydrograph object, bool skipScan, error encountered
-func getHydrographData(sc *bufio.Scanner, hydrographType string, pairedData bool, flowEndRS string) (Hydrograph, bool, error) {
-	hg := Hydrograph{}
+// Get Hydrograph Data of a Boundary Condition
+// Returns at EOF or if new Unsteady element is encountered
+func getHydrographData(sc *bufio.Scanner, hydrographType string, pairedData bool, flowEndRS string) (hg Hydrograph, skipScan bool, err error) {
 
 	if flowEndRS != "" {
 		hg.EndRS = flowEndRS
@@ -126,7 +130,10 @@ func getHydrographData(sc *bufio.Scanner, hydrographType string, pairedData bool
 			if rightofEquals(line) == "True" {
 				hg.UseDSS = true
 			}
-
+		case "DSS File":
+			hg.DSSFile = strings.TrimSpace(rightofEquals(sc.Text()))
+		case "DSS Path":
+			hg.DSSPath = strings.TrimSpace(rightofEquals(sc.Text()))
 		case "Use Fixed Start Time":
 			ufs := strings.TrimSpace(rightofEquals(line))
 			if ufs == "True" {
@@ -141,12 +148,11 @@ func getHydrographData(sc *bufio.Scanner, hydrographType string, pairedData bool
 			}
 		}
 	}
-
-	return hg, true, nil
+	return
 }
 
 // Get T. S. Gate Openings data
-// Returns if new Unsteady element is encountered
+// Returns at EOF or if new Unsteady element is encountered
 func getGateData(sc *bufio.Scanner) (gates map[string]*Hydrograph, skipScan bool, err error) {
 	gates = make(map[string]*Hydrograph)
 	var hg *Hydrograph
@@ -170,6 +176,10 @@ func getGateData(sc *bufio.Scanner) (gates map[string]*Hydrograph, skipScan bool
 			if rightofEquals(line) == "True" {
 				hg.UseDSS = true
 			}
+		case "Gate DSS File":
+			hg.DSSFile = strings.TrimSpace(rightofEquals(sc.Text()))
+		case "Gate DSS Path":
+			hg.DSSPath = strings.TrimSpace(rightofEquals(sc.Text()))
 		case "Gate Time Interval":
 			hg.TimeInterval = rightofEquals(sc.Text())
 		case "Gate Use Fixed Start Time":

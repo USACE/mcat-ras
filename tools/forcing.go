@@ -32,6 +32,8 @@ type Hydrograph struct {
 	EndRS              string      `json:"flow_distribution_last_RS,omitempty"` // flow will be distributed from RS to EndRS. Valid for Reaches with Uniform Lateral Inflow or Groundwater Interflow
 	Values             interface{} `json:"values,omitempty"`
 	UseDSS             bool        `json:"use_dss"`
+	DSSFile            string      `json:"dss_file,omitempty"`
+	DSSPath            string      `json:"dss_path,omitempty"`
 	UseFixedStart      bool        `json:"fixed_start"`
 	FixedStartDateTime *DateTime   `json:"fixed_start_date_time,omitempty"` // pointer to have zero value, so that omitempty can work
 }
@@ -43,8 +45,10 @@ type DateTime struct {
 
 // Rating Curve
 type RatingCurve struct {
-	Values [][2]float64 `json:"values,omitempty"`
-	UseDSS bool         `json:"use_dss"`
+	Values  [][2]float64 `json:"values,omitempty"`
+	UseDSS  bool         `json:"use_dss"`
+	DSSFile string       `json:"dss_file,omitempty"`
+	DSSPath string       `json:"dss_path,omitempty"`
 }
 
 // Elevation Controlled Gates Data.
