@@ -1,3 +1,5 @@
+// Structs and functions used to parse all [steady, unsteady, quasi-unsteady] types of flow files.
+
 package tools
 
 import (
@@ -6,53 +8,20 @@ import (
 	"github.com/USACE/filestore"
 )
 
-// These prefixes are used to determine the beginning and end of HEC-RAS elements
-var forcingElementsPrefix = [...]string{"Boundary Location"}
-
-// Forcing Data ...
+// Main struct for focing data.
 type ForcingData struct {
 	Steady        map[string]SteadyData   `json:"Steady,omitempty"`
-	QuasiUnsteady interface{}             `json:"QuasiUnsteady,omitempty"` // to be implemented
+	QuasiUnsteady map[string]interface{}  `json:"QuasiUnsteady,omitempty"` // to be implemented
 	Unsteady      map[string]UnsteadyData `json:"Unsteady,omitempty"`
 }
 
-// Boundary Condition ...
+// Boundary Condition.
 type BoundaryCondition struct {
 	RS          string      `json:",omitempty"`        // only exists for unsteady rivers
 	BCLine      string      `json:"bc_line,omitempty"` // only exists for unsteady storage and 2D areas
 	Description string      `json:"description,omitempty"`
 	Type        string      `json:"type"`
 	Data        interface{} `json:"data"`
-}
-
-// Hydrograph Data.
-// Can be Flow, Stage, Precipitation, Uniform Lateral Inflow, Lateral Inflow, Ground Water Interflow, or Gate Opening Hydrograph.
-type Hydrograph struct {
-	TimeInterval       string      `json:"time_interval,omitempty"`
-	EndRS              string      `json:"flow_distribution_last_RS,omitempty"` // flow will be distributed from RS to EndRS. Valid for Reaches with Uniform Lateral Inflow or Groundwater Interflow
-	Values             interface{} `json:"values,omitempty"`
-	UseDSS             bool        `json:"use_dss"`
-	DSSFile            string      `json:"dss_file,omitempty"`
-	DSSPath            string      `json:"dss_path,omitempty"`
-	UseFixedStart      bool        `json:"fixed_start"`
-	FixedStartDateTime *DateTime   `json:"fixed_start_date_time,omitempty"` // pointer to have zero value, so that omitempty can work
-}
-
-type DateTime struct {
-	Date  string `json:"date,omitempty"`
-	Hours string `json:"hours,omitempty"` // should not be int/float or else 0015 hours will become 15 hours
-}
-
-// Rating Curve
-type RatingCurve struct {
-	Values  [][2]float64 `json:"values,omitempty"`
-	UseDSS  bool         `json:"use_dss"`
-	DSSFile string       `json:"dss_file,omitempty"`
-	DSSPath string       `json:"dss_path,omitempty"`
-}
-
-// Elevation Controlled Gates Data.
-type ElevControlGates struct {
 }
 
 // Get Forcing Data from steady, unsteady or quasi-steady flow file.
@@ -64,7 +33,8 @@ func GetForcingData(fd *ForcingData, fs filestore.FileStore, flowFilePath string
 	} else if extPrefix == ".u" {
 		err = getUnsteadyData(fd, fs, flowFilePath)
 	} else if extPrefix == ".q" {
-		return err // not implemented
+		flowFileName := filepath.Base(flowFilePath)
+		fd.QuasiUnsteady[flowFileName] = "Not Implemented"
 	}
 
 	return err

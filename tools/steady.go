@@ -1,3 +1,5 @@
+// Structs and functions used to parse steady flow files.
+
 package tools
 
 import (
@@ -11,10 +13,10 @@ import (
 	"github.com/go-errors/errors"
 )
 
-// These prefixes are used to determine the beginning and end of HEC-RAS elements
+// These prefixes are used to determine the beginning and end of HEC-RAS elements.
 var steadyElementsPrefix = [...]string{"River Rch & RM", "Boundary for River Rch & Prof#"}
 
-// map of steadyBoundaryConditionTypes
+// Map of steadyBoundaryConditionTypes
 var bcTypeMapping = map[string]string{
 	"0": "",
 	"1": "Known WS",
@@ -23,14 +25,14 @@ var bcTypeMapping = map[string]string{
 	"4": "Rating Curve",
 }
 
-// Steady Data
+// Steady Data.
 type SteadyData struct {
 	FlowTitle      string
 	ProgramVersion string
 	Profiles       []Profile
 }
 
-// Steady Flow Profile ...
+// Steady Flow Profile.
 type Profile struct {
 	Name                  string
 	BoundaryConditions    map[string]*map[string]BoundaryCondition
@@ -38,19 +40,19 @@ type Profile struct {
 	StorageAreaElevations []StoAreaElevation
 }
 
-// River Flow Data Pair...
+// River Flow Data Pair.
 type RSFlow struct {
 	RS   string  `json:"river_station"`
 	Flow float64 `json:"flow"`
 }
 
-// Storage Area Elevation Data Pair...
+// Storage Area Elevation Data Pair.
 type StoAreaElevation struct {
 	SorageArea string  `json:"storage_area"`
 	Elevation  float64 `json:"elevation"`
 }
 
-// Get Number of Profiles
+// Get Number of Profiles.
 func getNameNumProfiles(fs filestore.FileStore, flowFilePath string) (numProf int, names []string, err error) {
 
 	file, err := fs.GetObject(flowFilePath)
@@ -118,7 +120,6 @@ func parseRFHeader(line string) (reach string, rs string, err error) {
 // Advances the given scanner.
 func getReachFlows(sc *bufio.Scanner, sd *SteadyData) error {
 
-	fmt.Println("getREachflow", len(sd.Profiles))
 	// Get Name, and Location of reach
 	reach, rs, err := parseRFHeader(sc.Text())
 	if err != nil {
@@ -253,7 +254,7 @@ func getSteadyData(fd *ForcingData, fs filestore.FileStore, flowFilePath string)
 	for eof == false {
 		skipScan := false
 		line := sc.Text()
-		fmt.Println(line)
+
 		switch {
 		case strings.HasPrefix(line, "River Rch & RM="):
 			err = getReachFlows(sc, &sd)
@@ -272,7 +273,6 @@ func getSteadyData(fd *ForcingData, fs filestore.FileStore, flowFilePath string)
 			}
 		}
 	}
-	fmt.Println(sd)
 	fd.Steady[flowFileName] = sd
 
 	return nil

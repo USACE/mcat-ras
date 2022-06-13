@@ -1,3 +1,5 @@
+// Structs and functions used to parse unsteady flow files.
+
 package tools
 
 import (
@@ -11,8 +13,13 @@ import (
 	"github.com/go-errors/errors"
 )
 
+// These prefixes are used to determine the beginning and end of HEC-RAS elements
+var unsteadyElementsPrefix = [...]string{"Boundary Location"}
+
 // Unsteady Data
 type UnsteadyData struct {
+	FlowTitle          string
+	ProgramVersion     string
 	InitialConditions  interface{} // to be implemented
 	BoundaryConditions UnsteadyBoundaryConditions
 	MeterologicalData  interface{} // to be implemented
@@ -27,6 +34,32 @@ type UnsteadyBoundaryConditions struct {
 	Connections map[string][]BoundaryCondition
 	// Only one boundary condition for each element in pumps
 	PumpStations map[string]BoundaryCondition
+}
+
+// Rating Curve
+type RatingCurve struct {
+	Values  [][2]float64 `json:"values,omitempty"`
+	UseDSS  bool         `json:"use_dss"`
+	DSSFile string       `json:"dss_file,omitempty"`
+	DSSPath string       `json:"dss_path,omitempty"`
+}
+
+// Hydrograph Data.
+// Can be Flow, Stage, Precipitation, Uniform Lateral Inflow, Lateral Inflow, Ground Water Interflow, or Gate Opening Hydrograph.
+type Hydrograph struct {
+	TimeInterval       string      `json:"time_interval,omitempty"`
+	EndRS              string      `json:"flow_distribution_last_RS,omitempty"` // flow will be distributed from RS to EndRS. Valid for Reaches with Uniform Lateral Inflow or Groundwater Interflow
+	Values             interface{} `json:"values,omitempty"`
+	UseDSS             bool        `json:"use_dss"`
+	DSSFile            string      `json:"dss_file,omitempty"`
+	DSSPath            string      `json:"dss_path,omitempty"`
+	UseFixedStart      bool        `json:"fixed_start"`
+	FixedStartDateTime *DateTime   `json:"fixed_start_date_time,omitempty"` // pointer to have zero value, so that omitempty can work
+}
+
+type DateTime struct {
+	Date  string `json:"date,omitempty"`
+	Hours string `json:"hours,omitempty"` // should not be int/float or else 0015 hours will become 15 hours
 }
 
 // Parse Unsteady Boundary Condition's header.
@@ -71,7 +104,7 @@ func getRatingCurveData(sc *bufio.Scanner) (rc RatingCurve, skipScan bool, err e
 		line := sc.Text()
 		loe := leftofEquals(line)
 
-		if stringInSlice(loe, forcingElementsPrefix[:]) {
+		if stringInSlice(loe, unsteadyElementsPrefix[:]) {
 			return rc, true, nil
 		}
 
@@ -122,7 +155,7 @@ func getHydrographData(sc *bufio.Scanner, hydrographType string, pairedData bool
 		line := sc.Text()
 		loe := leftofEquals(line)
 
-		if stringInSlice(loe, forcingElementsPrefix[:]) {
+		if stringInSlice(loe, unsteadyElementsPrefix[:]) {
 			return hg, true, nil
 		}
 
@@ -162,7 +195,7 @@ func getGateData(sc *bufio.Scanner) (gates map[string]*Hydrograph, skipScan bool
 		line := sc.Text()
 		loe := leftofEquals(line)
 
-		if stringInSlice(loe, forcingElementsPrefix[:]) {
+		if stringInSlice(loe, unsteadyElementsPrefix[:]) {
 			skipScan = true
 			return
 		}
@@ -189,7 +222,6 @@ func getGateData(sc *bufio.Scanner) (gates map[string]*Hydrograph, skipScan bool
 				hg.UseFixedStart = true
 			}
 		case "Gate Fixed Start Date/Time":
-			fmt.Printf("%p", &hg)
 			fsdt := strings.Split(rightofEquals(line), ",")
 			if len(fsdt[0]) > 0 {
 				hg.FixedStartDateTime = &DateTime{}
@@ -231,7 +263,7 @@ func getBoundaryCondition(sc *bufio.Scanner) (parentType string, parent string, 
 	for sc.Scan() {
 		line := sc.Text()
 		loe := leftofEquals(line)
-		if stringInSlice(loe, forcingElementsPrefix[:]) {
+		if stringInSlice(loe, unsteadyElementsPrefix[:]) {
 			if bc.Type == "" {
 				bc.Type = "Unknown Type"
 			}
