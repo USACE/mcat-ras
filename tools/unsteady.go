@@ -28,7 +28,7 @@ type UnsteadyBoundaryConditions struct {
 	PumpStations map[string]BoundaryCondition
 }
 
-// Parse Boundary Condition's header.
+// Parse Unsteady Boundary Condition's header.
 func parseUnsteadyBCHeader(line string) (parentType string, parent string, flowEndRS string, bc BoundaryCondition, err error) {
 	bcArray := strings.Split(rightofEquals(line), ",")
 	if strings.TrimSpace(bcArray[0]) != "" {
@@ -55,7 +55,7 @@ func parseUnsteadyBCHeader(line string) (parentType string, parent string, flowE
 	return
 }
 
-// Return a RatingCurve object, bool skipScan, error encountered
+// Get Rating Curve Boundary Condition Data
 func getRatingCurveData(sc *bufio.Scanner) (RatingCurve, bool, error) {
 	rc := RatingCurve{}
 
@@ -92,7 +92,7 @@ func getHydrographData(sc *bufio.Scanner, hydrographType string, pairedData bool
 		hg.EndRS = flowEndRS
 	}
 
-	if pairedData { // Stage and Flow Hydrograph
+	if pairedData { // Stage and Flow Hydrograph or IB Stage and Flow
 		series, innerErr := getDataPairsfromTextBlock(hydrographType, sc, 80, 8)
 
 		if innerErr != nil {
@@ -145,72 +145,61 @@ func getHydrographData(sc *bufio.Scanner, hydrographType string, pairedData bool
 	return hg, true, nil
 }
 
-func getGateData(sc *bufio.Scanner, flowEndRS string) (map[int]Hydrograph, bool, error) {
-	var gates = make(map[int]Hydrograph)
+// Get T. S. Gate Openings data
+// Returns if new Unsteady element is encountered
+func getGateData(sc *bufio.Scanner) (gates map[string]*Hydrograph, skipScan bool, err error) {
+	gates = make(map[string]*Hydrograph)
+	var hg *Hydrograph
+
 	for {
 		line := sc.Text()
-		if strings.HasPrefix(line, "Boundary Location=") {
-			return gates, true, nil
+		loe := leftofEquals(line)
+
+		if stringInSlice(loe, forcingElementsPrefix[:]) {
+			skipScan = true
+			return
 		}
 
-		loe := leftofEquals(line)
-		if loe == "Gate Name" {
-			gate_number, innerErr := strconv.Atoi(strings.TrimSpace(line[16:]))
+		switch loe {
+		case "Gate Name":
+			gateName := strings.TrimSpace(rightofEquals(line))
+			// when new Gate starts, create a new variable to assign data to
+			hg = &Hydrograph{}
+			gates[gateName] = hg
+		case "Gate Use DSS":
+			if rightofEquals(line) == "True" {
+				hg.UseDSS = true
+			}
+		case "Gate Time Interval":
+			hg.TimeInterval = rightofEquals(sc.Text())
+		case "Gate Use Fixed Start Time":
+			ufs := strings.TrimSpace(rightofEquals(line))
+			if ufs == "True" {
+				hg.UseFixedStart = true
+			}
+		case "Gate Fixed Start Date/Time":
+			fmt.Printf("%p", &hg)
+			fsdt := strings.Split(rightofEquals(line), ",")
+			if len(fsdt[0]) > 0 {
+				hg.FixedStartDateTime = &DateTime{}
+				hg.FixedStartDateTime.Date = fsdt[0]
+				hg.FixedStartDateTime.Hours = fsdt[1]
+			}
+		case "Gate Openings":
+			numValues, innerErr := strconv.Atoi(strings.TrimSpace(rightofEquals(sc.Text())))
 			if innerErr != nil {
 				return gates, false, innerErr
 			}
-			var hg Hydrograph
-			if flowEndRS != "" {
-				hg.EndRS = flowEndRS
-			}
-
-			sc.Scan()
-			for ; ; sc.Scan() {
-				line = sc.Text()
-				loe = leftofEquals(line)
-
-				switch loe {
-				case "Gate Use DSS":
-					if rightofEquals(line) == "True" {
-						hg.UseDSS = true
-					}
-
-				case "Gate Use Fixed Start Time":
-					ufs := strings.TrimSpace(rightofEquals(line))
-					if ufs == "True" {
-						hg.UseFixedStart = true
-					}
-				case "Gate Fixed Start Date/Time":
-					fsdt := strings.Split(rightofEquals(line), ",")
-					if len(fsdt[0]) > 0 {
-						hg.FixedStartDateTime = &DateTime{}
-						hg.FixedStartDateTime.Date = fsdt[0]
-						hg.FixedStartDateTime.Hours = fsdt[1]
-					}
+			if numValues != 0 {
+				data, innerErr := seriesFromTextBlock(sc, numValues, 80, 8)
+				if innerErr != nil {
+					return gates, false, innerErr
 				}
-				if loe == "Gate Openings" {
-					numValues, innerErr := strconv.Atoi(strings.TrimSpace(rightofEquals(sc.Text())))
-					if innerErr != nil {
-						return gates, false, innerErr
-					}
-					if numValues != 0 {
-						data, innerErr := seriesFromTextBlock(sc, numValues, 80, 8)
-						if innerErr != nil {
-							return gates, false, innerErr
-						}
-						hg.Values = data
-					}
-					gates[gate_number] = hg
-					sc.Scan()
-					break
-				}
-
+				hg.Values = data
 			}
-
 		}
-
+		sc.Scan()
 	}
-
 }
 
 // Get Boundary Condition's data.
@@ -226,13 +215,14 @@ func getBoundaryCondition(sc *bufio.Scanner) (parentType string, parent string, 
 		return
 	}
 
+	timeInterval := ""
 	// Get type and data of boundary condition
 	for sc.Scan() {
 		line := sc.Text()
 		loe := leftofEquals(line)
 		if stringInSlice(loe, forcingElementsPrefix[:]) {
 			if bc.Type == "" {
-				bc.Type = "UNKNOWN TYPE"
+				bc.Type = "Unknown Type"
 			}
 			skipScan = true // a new HEC RAS element has been encountered, skip next scan and return
 			return
@@ -245,11 +235,12 @@ func getBoundaryCondition(sc *bufio.Scanner) (parentType string, parent string, 
 			slope, _ := parseFloat(strings.TrimSpace(strings.Split(rightofEquals(line), ",")[0]), 64)
 			bc.Data = map[string]float64{"Friction Slope": slope}
 			return
-		// case "Interval":
-		// 	hg.TimeInterval = rightofEquals(sc.Text())
+		case "Interval":
+			timeInterval = rightofEquals(sc.Text())
 		case "Flow Hydrograph", "Precipitation Hydrograph", "Uniform Lateral Inflow Hydrograph", "Lateral Inflow Hydrograph", "Ground Water Interflow", "Stage Hydrograph":
 			bc.Type = loe
 			hg, ss, innerErr := getHydrographData(sc, loe, false, flowEndRS)
+			hg.TimeInterval = timeInterval
 			skipScan = ss
 			if innerErr != nil {
 				err = innerErr
@@ -265,6 +256,7 @@ func getBoundaryCondition(sc *bufio.Scanner) (parentType string, parent string, 
 				bc.Type = loe
 			}
 			hg, ss, innerErr := getHydrographData(sc, loe, true, flowEndRS)
+			hg.TimeInterval = timeInterval
 			skipScan = ss
 
 			if err != nil {
@@ -286,18 +278,17 @@ func getBoundaryCondition(sc *bufio.Scanner) (parentType string, parent string, 
 			bc.Data = rc
 			bc.Type = loe
 			return
-		case "Gate Name":
-			gate, ss, innerErr := getGateData(sc, flowEndRS)
-			skipScan = ss
 
+		case "Gate Name": // Keyword for T.S Gate Openings
+			gate, ss, innerErr := getGateData(sc)
+			skipScan = ss
 			if innerErr != nil {
 				err = innerErr
 				return
 			}
 
 			bc.Data = gate
-			bc.Type = "Gate Openings"
-
+			bc.Type = "T. S. Gate Openings"
 			return
 
 		case "Rule Operation", "Rule Expression":
