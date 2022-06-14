@@ -108,24 +108,43 @@ func numberofLines(nValues int, colWidth int, valueWidth int) int {
 
 // Get series from HEC-RAS Text block that contains series e.g. Flow Hydrograph
 func seriesFromTextBlock(sc *bufio.Scanner, nValues int, colWidth int, valueWidth int) ([]float64, error) {
-	series := []float64{}
+	series := make([]float64, nValues)
+
+	textValues, err := parseSeriesTextBlock(sc, nValues, colWidth, valueWidth)
+	if err != nil {
+		return series, err
+	}
+	for i, val := range textValues {
+		floatVal, err := parseFloat(val, 64)
+		if err != nil {
+			return series, errors.Wrap(err, 0)
+		}
+		series[i] = floatVal
+	}
+
+	return series, nil
+}
+
+// Returns a series of strings (rather than floats)
+// Can check for empty entries rather than set to 0
+func parseSeriesTextBlock(sc *bufio.Scanner, nValues int, colWidth int, valueWidth int) ([]string, error) {
+	series := make([]string, nValues)
+	i := 0
 out:
 	for sc.Scan() {
 		line := sc.Text()
-		for s := 0; s < colWidth; {
+		for s := 0; s < colWidth; s += valueWidth {
 			if len(line) > s {
-				val, err := parseFloat(strings.TrimSpace(line[s:s+valueWidth]), 64)
-				if err != nil {
-					return series, errors.Wrap(err, 0)
-				}
-				series = append(series, val)
-				if len(series) == nValues {
+				val := strings.TrimSpace(line[s : s+valueWidth])
+
+				series[i] = val
+				i++
+				if i == nValues {
 					break out
 				}
 			} else {
 				break
 			}
-			s += valueWidth
 		}
 	}
 	return series, nil

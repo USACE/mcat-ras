@@ -48,8 +48,8 @@ type RSFlow struct {
 
 // Storage Area Elevation Data Pair.
 type StoAreaElevation struct {
-	SorageArea string  `json:"storage_area"`
-	Elevation  float64 `json:"elevation"`
+	StorageArea string  `json:"storage_area"`
+	Elevation   float64 `json:"elevation"`
 }
 
 // Get Number of Profiles.
@@ -124,6 +124,37 @@ func parseSteadyBCHeader(line string) (reach string, profNum int, err error) {
 		err = errors.Errorf("Cannot determine River/Reach name, profile number at line '%s'.", line)
 		return
 	}
+}
+
+//Get Storage Area information and add to the appropriate profile if not empty
+func getStorageArea(sc *bufio.Scanner, sd *SteadyData) error {
+	line := sc.Text()
+	roe := rightofEquals(line)
+
+	nameAndProfile := strings.Split(roe, ",")
+	name := strings.TrimSpace(nameAndProfile[0])
+	numProfiles, innerErr := strconv.Atoi(strings.TrimSpace(nameAndProfile[1]))
+	if innerErr != nil {
+		return innerErr
+	}
+
+	values, innerErr := parseSeriesTextBlock(sc, numProfiles, 80, 8)
+	if innerErr != nil {
+		return innerErr
+	}
+
+	for i, textVal := range values {
+		if len(textVal) > 0 {
+			floatVal, err := parseFloat(textVal, 64)
+			if err != nil {
+				return err
+			}
+			newStorage := StoAreaElevation{name, floatVal}
+			sd.Profiles[i].StorageAreaElevations = append(sd.Profiles[i].StorageAreaElevations, newStorage)
+		}
+	}
+
+	return nil
 }
 
 // Get Boundary Condition's data.
@@ -245,6 +276,16 @@ func getSteadyData(fd *ForcingData, fs filestore.FileStore, flowFilePath string)
 			}
 		case "Boundary for River Rch & Prof#":
 			skipScan, err = getReachBCs(sc, &sd)
+			if err != nil {
+				return err
+			}
+
+		case "Storage Area Elev":
+			err := getStorageArea(sc, &sd)
+			if err != nil {
+				return err
+			}
+
 		}
 
 		// if a new RAS element is encountered during the functions call, scanning again will skip that element, therefore skip scan
