@@ -14,7 +14,11 @@ import (
 )
 
 // These prefixes are used to determine the beginning and end of HEC-RAS elements
-var unsteadyElementsPrefix = [...]string{"Boundary Location"}
+var unsteadyElementsPrefix = [...]string{
+	"Flow Title",
+	"Program Version",
+	"Boundary Location",
+}
 
 // Unsteady Data
 type UnsteadyData struct {

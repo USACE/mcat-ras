@@ -14,7 +14,13 @@ import (
 )
 
 // These prefixes are used to determine the beginning and end of HEC-RAS elements.
-var steadyElementsPrefix = [...]string{"River Rch & RM", "Boundary for River Rch & Prof#"}
+var steadyElementsPrefix = [...]string{
+	"Flow Title",
+	"Program Version",
+	"River Rch & RM",
+	"Boundary for River Rch & Prof#",
+	"Storage Area Elev",
+}
 
 // Map of steadyBoundaryConditionTypes
 var bcTypeMapping = map[string]string{
