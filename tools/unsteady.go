@@ -191,7 +191,8 @@ func getGateData(sc *bufio.Scanner) (gates map[string]*Hydrograph, skipScan bool
 	gates = make(map[string]*Hydrograph)
 	var hg *Hydrograph
 
-	for {
+	eof := false
+	for !eof {
 		line := sc.Text()
 		loe := leftofEquals(line)
 
@@ -241,8 +242,9 @@ func getGateData(sc *bufio.Scanner) (gates map[string]*Hydrograph, skipScan bool
 				hg.Values = data
 			}
 		}
-		sc.Scan()
+		eof = !sc.Scan()
 	}
+	return
 }
 
 // Get Boundary Condition's data.
@@ -380,17 +382,19 @@ func getUnsteadyData(fd *ForcingData, fs filestore.FileStore, flowFilePath strin
 		return err
 	}
 
-	ud.FlowTitle, ud.ProgramVersion = getFlowTitleVersion(sc, unsteadyElementsPrefix[:])
-
-	eof := false
+	eof := !sc.Scan()
 	for !eof {
 		skipScan := false
 		line := sc.Text()
+		loe := leftofEquals(line)
 
-		switch {
-		case strings.HasPrefix(line, "Boundary Location="):
+		switch loe {
+		case "Flow Title":
+			ud.FlowTitle = strings.TrimSpace(rightofEquals(line))
+		case "Program Version":
+			ud.ProgramVersion = strings.TrimSpace(rightofEquals(line))
+		case "Boundary Location":
 			parentType, parent, bc, ss, err := getBoundaryCondition(sc)
-
 			skipScan = ss
 			if err != nil {
 				return errors.Wrap(err, 0)

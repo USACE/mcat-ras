@@ -227,20 +227,23 @@ func getSteadyData(fd *ForcingData, fs filestore.FileStore, flowFilePath string)
 		return err
 	}
 
-	sd.FlowTitle, sd.ProgramVersion = getFlowTitleVersion(sc, steadyElementsPrefix[:])
-
-	eof := false
+	eof := !sc.Scan()
 	for !eof {
 		skipScan := false
 		line := sc.Text()
+		loe := leftofEquals(line)
 
-		switch {
-		case strings.HasPrefix(line, "River Rch & RM="):
+		switch loe {
+		case "Flow Title":
+			sd.FlowTitle = strings.TrimSpace(rightofEquals(line))
+		case "Program Version":
+			sd.ProgramVersion = strings.TrimSpace(rightofEquals(line))
+		case "River Rch & RM":
 			err = getReachFlows(sc, &sd)
 			if err != nil {
 				return errors.Wrap(err, 0)
 			}
-		case strings.HasPrefix(line, "Boundary for River Rch & Prof#="):
+		case "Boundary for River Rch & Prof#":
 			skipScan, err = getReachBCs(sc, &sd)
 		}
 
