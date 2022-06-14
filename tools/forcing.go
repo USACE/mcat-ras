@@ -17,9 +17,9 @@ type ForcingData struct {
 
 // Boundary Condition.
 type BoundaryCondition struct {
-	RS          string      `json:",omitempty"`        // only exists for unsteady rivers
-	BCLine      string      `json:"bc_line,omitempty"` // only exists for unsteady storage and 2D areas
-	Description string      `json:"description,omitempty"`
+	RS          string      `json:",omitempty"`            // only exists for unsteady rivers
+	BCLine      string      `json:"bc_line,omitempty"`     // only exists for unsteady storage and 2D areas
+	Description string      `json:"description,omitempty"` // only exists for Rules, not implemented yet
 	Type        string      `json:"type"`
 	Data        interface{} `json:"data"`
 }
