@@ -105,9 +105,20 @@ func getReachFlows(sc *bufio.Scanner, sd *SteadyData) error {
 		return err
 	}
 
-	series, err := seriesFromTextBlock(sc, len(sd.Profiles), 80, 8)
-	for index, element := range series {
-		sd.Profiles[index].Flows[reach] = append(sd.Profiles[index].Flows[reach], RSFlow{rs, element})
+	txtValues, innerErr := parseSeriesTextBlock(sc, len(sd.Profiles), 80, 8)
+	if innerErr != nil {
+		return innerErr
+	}
+
+	for i, textVal := range txtValues {
+		// empty flow is not 0 flow
+		if len(textVal) > 0 {
+			floatVal, err := parseFloat(textVal, 64)
+			if err != nil {
+				return err
+			}
+			sd.Profiles[i].Flows[reach] = append(sd.Profiles[i].Flows[reach], RSFlow{rs, floatVal})
+		}
 	}
 
 	return nil
@@ -126,7 +137,7 @@ func parseSteadyBCHeader(line string) (reach string, profNum int, err error) {
 	}
 }
 
-//Get Storage Area information and add to the appropriate profile if not empty
+// Get Storage Area information and add to the appropriate profile if elevation not empty.
 func getStorageArea(sc *bufio.Scanner, sd *SteadyData) error {
 	line := sc.Text()
 	roe := rightofEquals(line)
@@ -138,12 +149,12 @@ func getStorageArea(sc *bufio.Scanner, sd *SteadyData) error {
 		return innerErr
 	}
 
-	values, innerErr := parseSeriesTextBlock(sc, numProfiles, 80, 8)
+	txtValues, innerErr := parseSeriesTextBlock(sc, numProfiles, 80, 8)
 	if innerErr != nil {
 		return innerErr
 	}
 
-	for i, textVal := range values {
+	for i, textVal := range txtValues {
 		if len(textVal) > 0 {
 			floatVal, err := parseFloat(textVal, 64)
 			if err != nil {
