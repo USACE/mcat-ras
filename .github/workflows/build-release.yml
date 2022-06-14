@@ -16,9 +16,9 @@ jobs:
       - name: Bump a new Release and update Version
         uses: actions/checkout@v2
         with:
-          fetch-depth: "0"
+          fetch-depth: '0'
       - name: Bump version and push tag
-        uses: anothrNick/github-tag-action@1.26.0
+        uses: anothrNick/github-tag-action@1.39.0
         id: update-tag
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

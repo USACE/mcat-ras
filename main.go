@@ -37,6 +37,7 @@ func main() {
 	e.GET("/index", handlers.Index(appConfig.FileStore))
 	e.GET("/isgeospatial", handlers.IsGeospatial(appConfig.FileStore))
 	e.GET("/geospatialdata", handlers.GeospatialData(appConfig))
+	e.GET("/forcingdata", handlers.ForcingData(appConfig))
 
 	// pgdb endpoints
 	e.POST("/upsert/model", pgdb.UpsertRasModel(appConfig, dbConfig))
