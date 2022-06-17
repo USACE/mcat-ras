@@ -23,11 +23,13 @@ services:
       - app_network      
 
   newman:
-    build: ./testing
-    image: mcat-ras-newman
+    image: postman/newman:alpine
     container_name: mcat-ras-newman
-    entrypoint: ["/home/testing/entrypoint.sh"]
+    command:
+      run /app/testing/postman_collection.json
+    volumes:
+      - ./testing:/app/testing
     depends_on:
       - "api"
     networks:
-      - app_network
+      - app_network  
