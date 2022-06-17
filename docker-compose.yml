@@ -1,7 +1,14 @@
 version: "3.4"
 
+networks:
+ app_network:
+   name: mcat-ras-network
+   driver: bridge
+
 services:
-  mcat-ras:
+  api:
+    container_name: mcat-ras-api
+    image: mcat-ras-api
     build:
       target: build
       # target: prod
@@ -12,3 +19,15 @@ services:
       - 5600:5600
     env_file:
       - ./.env
+    networks:
+      - app_network      
+
+  newman:
+    build: ./testing
+    image: mcat-ras-newman
+    container_name: mcat-ras-newman
+    entrypoint: ["/home/testing/entrypoint.sh"]
+    depends_on:
+      - "api"
+    networks:
+      - app_network
