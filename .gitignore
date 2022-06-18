@@ -7,6 +7,5 @@ ENV/
 env.bak/
 venv.bak/
 
-go.sum
 main
 .vscode/

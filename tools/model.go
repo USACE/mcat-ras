@@ -2,17 +2,15 @@ package tools
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
-	"log"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/USACE/filestore"
 	"github.com/dewberry/gdal"
+	"github.com/go-errors/errors" // warning: replaces standard errors
 )
 
 type fileExtMatchers struct {
@@ -29,7 +27,7 @@ type fileExtMatchers struct {
 	Projection  *regexp.Regexp
 }
 
-var rasRE fileExtMatchers = fileExtMatchers{ // Maybe these ones are better? need a regex experts opinion
+var RasRE fileExtMatchers = fileExtMatchers{ // Maybe these ones are better? need a regex experts opinion
 	Geom:        regexp.MustCompile(".g[0-9][0-9]"),     // `^\.g(0[1-9]|[1-9][0-9])$`
 	Plan:        regexp.MustCompile(".p[0-9][0-9]"),     // `^\.p(0[1-9]|[1-9][0-9])$`
 	Steady:      regexp.MustCompile(".f[0-9][0-9]"),     // `^\.f(0[1-9]|[1-9][0-9])$`
@@ -53,10 +51,11 @@ type rasWaitGroup struct {
 
 // Model is a general type should contain all necessary data for a model of any type.
 type Model struct {
-	Type           string
-	Version        string
-	DefinitionFile string
-	Files          ModelFiles
+	Type               string
+	Version            string
+	DefinitionFile     string
+	DefinitionFileHash string
+	Files              ModelFiles
 }
 
 // ModelFiles ...
@@ -141,9 +140,10 @@ func (rm *RasModel) ModelVersion() string {
 // Index ...
 func (rm *RasModel) Index() Model {
 	mod := Model{
-		Type:           rm.Type,
-		Version:        rm.Version,
-		DefinitionFile: filepath.Base(rm.Metadata.ProjFilePath),
+		Type:               rm.Type,
+		Version:            rm.Version,
+		DefinitionFile:     rm.Metadata.ProjFilePath,
+		DefinitionFileHash: rm.Metadata.ProjFileContents.Hash,
 		Files: ModelFiles{
 			InputFiles: InputFiles{
 				ControlFiles: ControlFiles{
@@ -196,23 +196,24 @@ func (rm *RasModel) Index() Model {
 	return mod
 }
 
-// IsGeospatial ...
+// Checks if a model is geospatial or not.
+// Versions less than 4.0 are not considered geospatial
 func (rm *RasModel) IsGeospatial() bool {
 	if rm.Metadata.Projection == "" {
-		log.Println("no valid coordinate reference system")
+		fmt.Println(rm.Metadata.ProjFilePath, "| no valid coordinate reference system")
 		return false
 	}
 	modelVersions := strings.Split(rm.Version, ",")
 	for _, version := range modelVersions {
 		if strings.Contains(version, ".g") {
 			geomVersion := strings.TrimSpace(strings.Split(version, ":")[1])
-			v, err := strconv.ParseFloat(geomVersion, 64)
+			v, err := parseFloat(geomVersion, 64)
 			if err != nil {
-				log.Println("could not convert the geometry version to a float")
+				fmt.Println("could not convert the geometry version to a float")
 				return false
 			}
 			if v < 4 {
-				log.Printf("geometry file version: %f is not geospatial", v)
+				fmt.Printf("geometry file version: %f is not geospatial", v)
 				return false
 			}
 		}
@@ -230,7 +231,7 @@ func (rm *RasModel) GeospatialData(destinationCRS int) (GeoData, error) {
 		sourceCRS := rm.Metadata.Projection
 
 		if err := checkUnitConsistency(modelUnits, sourceCRS); err != nil {
-			return gd, err
+			return gd, errors.Wrap(err, 0)
 		}
 
 		gd.Features = make(map[string]Features)
@@ -238,13 +239,13 @@ func (rm *RasModel) GeospatialData(destinationCRS int) (GeoData, error) {
 
 		for _, g := range rm.Metadata.GeomFiles {
 			if err := GetGeospatialData(&gd, rm.FileStore, g.Path, sourceCRS, destinationCRS); err != nil {
-				return gd, err
+				return gd, errors.Wrap(err, 0)
 			}
 		}
 		return gd, nil
 	}
 	err := errors.New("the model is not geospatial")
-	return gd, err
+	return gd, errors.Wrap(err, 0)
 
 }
 
@@ -253,11 +254,16 @@ func getModelFiles(rm *RasModel) error {
 
 	files, err := rm.FileStore.GetDir(prefix, false)
 	if err != nil {
-		return err
+		return errors.Wrap(err, 0)
 	}
 
 	for _, file := range *files {
-		rm.FileList = append(rm.FileList, filepath.Join(file.Path, file.Name))
+		// get only files that share the same base name or .prj files for projection
+		// rational behind .prj file is that there can be a shp file in the same level of Hec-RAS
+		// providing potential projection
+		if strings.HasPrefix(filepath.Join(file.Path, file.Name), strings.TrimSuffix(rm.Metadata.ProjFilePath, "prj")) || filepath.Ext(file.Name) == ".prj" {
+			rm.FileList = append(rm.FileList, filepath.Join(file.Path, file.Name))
+		}
 	}
 
 	return nil
@@ -270,7 +276,6 @@ func getProjection(rm *RasModel, fn string, wg *sync.WaitGroup) {
 
 	f, err := rm.FileStore.GetObject(fn)
 	if err != nil {
-		fmt.Println(err)
 		return
 	}
 	defer f.Close()
@@ -281,15 +286,11 @@ func getProjection(rm *RasModel, fn string, wg *sync.WaitGroup) {
 
 	sourceSpRef := gdal.CreateSpatialReference(line)
 	if err := sourceSpRef.Validate(); err != nil {
-		if filepath.Ext(fn) == ".prj" {
-			fmt.Println(fmt.Sprintf("%s is not a valid projection file, check that there are not multiple project files.\n", fn))
-		} else {
-			fmt.Println(err)
-		}
+		fmt.Println(fmt.Sprintf("%s is not a valid projection file.", fn))
 		return
 	}
 	if rm.Metadata.Projection != "" {
-		fmt.Println("Multiple projection files identified, cannot determine coordinate reference system")
+		fmt.Println("Projection already exist for the model.")
 		return
 	}
 
@@ -304,20 +305,25 @@ func NewRasModel(key string, fs filestore.FileStore) (*RasModel, error) {
 
 	err := verifyPrjPath(key, &rm)
 	if err != nil {
-		return &rm, err
+		return &rm, errors.Wrap(err, 0)
 	}
 
 	err = getModelFiles(&rm)
 	if err != nil {
-		return &rm, err
+		return &rm, errors.Wrap(err, 0)
 	}
 
 	err = getPrjData(&rm)
 	if err != nil {
-		return &rm, err
+		return &rm, errors.Wrap(err, 0)
 	}
 
 	var rasWG rasWaitGroup
+
+	// get projection using name.projection file
+	rasWG.Projection.Add(1)
+	projecFile := strings.TrimSuffix(key, ".prj") + ".projection"
+	go getProjection(&rm, projecFile, &rasWG.Projection)
 
 	for _, fp := range rm.FileList {
 
@@ -325,20 +331,20 @@ func NewRasModel(key string, fs filestore.FileStore) (*RasModel, error) {
 
 		switch {
 
-		case rasRE.Plan.MatchString(ext):
+		case RasRE.Plan.MatchString(ext):
 			rasWG.Plan.Add(1)
 			go getPlanData(&rm, fp, &rasWG.Plan)
 
-		case rasRE.Geom.MatchString(ext):
+		case RasRE.Geom.MatchString(ext):
 			rasWG.Geom.Add(1)
 			go getGeomData(&rm, fp, &rasWG.Geom)
 
-		case rasRE.AllFlow.MatchString(ext):
+		case RasRE.AllFlow.MatchString(ext):
 			rasWG.Flow.Add(1)
 			go getFlowData(&rm, fp, &rasWG.Flow)
 
-		case rasRE.Projection.MatchString(ext):
-			if filepath.Base(key) != filepath.Base(fp) {
+		case rm.Metadata.Projection == "" && RasRE.Projection.MatchString(ext):
+			if filepath.Base(key) != filepath.Base(fp) && fp != projecFile {
 				rasWG.Projection.Add(1)
 				go getProjection(&rm, fp, &rasWG.Projection)
 			}

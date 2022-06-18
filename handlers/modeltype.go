@@ -3,9 +3,7 @@ package handlers
 import (
 	"net/http"
 
-	ras "github.com/USACE/mcat-ras/tools"
-
-	"github.com/USACE/filestore"
+	"github.com/USACE/filestore" // warning: replaces standard errors
 	"github.com/labstack/echo/v4"
 )
 
@@ -23,13 +21,14 @@ func ModelType(fs *filestore.FileStore) echo.HandlerFunc {
 	return func(c echo.Context) error {
 
 		definitionFile := c.QueryParam("definition_file")
-
-		rm, err := ras.NewRasModel(definitionFile, *fs)
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, SimpleResponse{http.StatusInternalServerError, err.Error()})
+		if definitionFile == "" {
+			return c.JSON(http.StatusBadRequest, "Missing query parameter: `definition_file`")
 		}
-		typ := rm.ModelType()
 
-		return c.JSON(http.StatusOK, typ)
+		if !isAModel(fs, definitionFile) {
+			return c.JSON(http.StatusBadRequest, definitionFile+" is not a valid RAS prj file.")
+		}
+
+		return c.JSON(http.StatusOK, "RAS")
 	}
 }

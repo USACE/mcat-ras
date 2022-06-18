@@ -1,11 +1,12 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 
-	ras "github.com/USACE/mcat-ras/tools"
-
-	"github.com/USACE/filestore"
+	"github.com/USACE/filestore" // warning: replaces standard errors
 	"github.com/labstack/echo/v4"
 )
 
@@ -22,13 +23,39 @@ func IsGeospatial(fs *filestore.FileStore) echo.HandlerFunc {
 	return func(c echo.Context) error {
 
 		definitionFile := c.QueryParam("definition_file")
-
-		rm, err := ras.NewRasModel(definitionFile, *fs)
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, SimpleResponse{http.StatusInternalServerError, err.Error()})
+		if definitionFile == "" {
+			return c.JSON(http.StatusBadRequest, "Missing query parameter: `definition_file`")
 		}
-		isIt := rm.IsGeospatial()
 
-		return c.JSON(http.StatusOK, isIt)
+		if !isAModel(fs, definitionFile) {
+			return c.JSON(http.StatusBadRequest, definitionFile+" is not a valid RAS prj file.")
+		}
+
+		return c.JSON(http.StatusOK, isGeospatial(definitionFile, *fs))
 	}
+}
+
+func isGeospatial(definitionFile string, fs filestore.FileStore) bool {
+
+	modelVersions, err := getVersions(definitionFile, fs)
+	if err != nil {
+		return false
+	}
+
+	for _, version := range strings.Split(modelVersions, ",") {
+		if strings.Contains(version, ".g") {
+			geomVersion := strings.TrimSpace(strings.Split(version, ":")[1])
+			v, err := strconv.ParseFloat(geomVersion, 64)
+			if err != nil {
+				fmt.Printf("could not convert the geometry version to a float. prj file: %s\n", definitionFile)
+				return false
+			}
+			if v < 4 {
+				fmt.Printf("geometry file version: %f is not geospatial\n", v)
+				return false
+			}
+		}
+	}
+
+	return true
 }

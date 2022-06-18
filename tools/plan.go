@@ -2,7 +2,10 @@ package tools
 
 import (
 	"bufio"
+	"crypto/sha256"
 	"fmt"
+	"io"
+	"log"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -12,14 +15,13 @@ import (
 // PlanFileContents keywords and data container for ras plan file search
 type PlanFileContents struct {
 	Path            string
+	Hash            string
 	FileExt         string //`json:"File Extension"`
 	PlanTitle       string //`json:"Plan Title"`
 	ShortIdentifier string //`json:"Short Identifier"`
 	ProgramVersion  string //`json:"Program Version"`
-	QuasiSteadyFile string //`json:"QuasiSteady File"` //This is not currently used
-	UnsteadyFile    string //`json:"Unsteady File"`    //This is not currently used
 	GeomFile        string //`json:"Geom File"`
-	FlowFile        string //`json:"Flow File"`
+	FlowFile        string //`json:"Flow File"` // unsteady or steady both flow files are stored as FlowFile in HEC RAS plan file, replicating the same here
 	FlowRegime      string //`json:"FlowRegime"`
 	Description     string //`json:"Description"`
 	Notes           string
@@ -37,7 +39,7 @@ func getPlanData(rm *RasModel, fn string, wg *sync.WaitGroup) {
 		meta.Notes += msg
 		rm.Metadata.PlanFiles = append(rm.Metadata.PlanFiles, meta)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		}
 	}()
 
@@ -47,7 +49,11 @@ func getPlanData(rm *RasModel, fn string, wg *sync.WaitGroup) {
 	}
 	defer f.Close()
 
-	sc := bufio.NewScanner(f)
+	hasher := sha256.New()
+
+	fs := io.TeeReader(f, hasher) // fs is still a stream
+	sc := bufio.NewScanner(fs)
+
 	var line string
 	for sc.Scan() {
 
@@ -112,6 +118,8 @@ func getPlanData(rm *RasModel, fn string, wg *sync.WaitGroup) {
 		}
 	}
 	msg = ""
+	meta.Hash = fmt.Sprintf("%x", hasher.Sum(nil))
+
 	return
 
 }

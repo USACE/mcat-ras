@@ -1,8 +1,17 @@
 version: "3.4"
 
+networks:
+ app_network:
+   name: mcat-ras-network
+   driver: bridge
+
 services:
-  mcat-ras:
+  api:
+    container_name: mcat-ras-api
+    image: mcat-ras-api
     build:
+      target: build
+      # target: prod
       context: ./
     volumes:
       - ./:/app
@@ -10,4 +19,17 @@ services:
       - 5600:5600
     env_file:
       - ./.env
-    entrypoint: CompileDaemon --build="go build main.go" --command=./main
+    networks:
+      - app_network      
+
+  newman:
+    image: postman/newman:alpine
+    container_name: mcat-ras-newman
+    command:
+      run /app/testing/postman_collection.json --env-var "url=api:5600"
+    volumes:
+      - ./testing:/app/testing
+    depends_on:
+      - "api"
+    networks:
+      - app_network  
