@@ -111,7 +111,7 @@
 	"variable": [
 		{
 			"key": "url",
-			"value": "host.docker.internal:5600",
+			"value": "localhost:5600",
 			"type": "string"
 		}
 	]

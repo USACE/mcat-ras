@@ -26,7 +26,7 @@ services:
     image: postman/newman:alpine
     container_name: mcat-ras-newman
     command:
-      run /app/testing/postman_collection.json
+      run /app/testing/postman_collection.json --env-var "url=api:5600"
     volumes:
       - ./testing:/app/testing
     depends_on:
