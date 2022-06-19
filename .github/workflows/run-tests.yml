@@ -1,0 +1,60 @@
+name: 🧪 API tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workbench_default:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: 'Create env file'
+        run: |
+          touch .env
+          echo AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }} >> .env
+          echo AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} >> .env
+          echo AWS_DEFAULT_REGION=${{ secrets.AWS_DEFAULT_REGION }} >> .env
+          echo S3_BUCKET=${{ secrets.S3_BUCKET }} >> .env
+
+      - name: Build the docker-compose stack
+        run: docker-compose build
+
+      - name: Run the docker-compose stack
+        run: docker-compose up -d
+
+      - name: Check if all 2 containers are alive
+        run: |
+          # sleep 25s
+          docker ps -a
+          if [ $(docker ps | grep mcat-ras- | wc -l) -lt 2 ]
+          then
+            echo "Less than 2 docker services alive."
+            exit 1
+          fi
+
+      - name: Show Newman results
+        run: |
+          sleep 50s
+          docker logs mcat-ras-newman
+
+      - name: Check Newman Exit Code
+        run: |
+          if [ $(docker inspect mcat-ras-newman --format='{{.State.ExitCode}}') -ne 0 ] 
+          then
+            echo "Newman failed."
+            exit 1
+          fi
+
+      - name: Check if Newman is in endless loop
+        run: |
+          if [ $(docker ps | mcat-ras-newman | wc -l) -ne 0 ]
+          then
+            echo "Newman still running."
+            exit 1
+          fi
