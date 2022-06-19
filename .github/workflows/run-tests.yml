@@ -5,7 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-  workbench_default:
+  workflow_dispatch:
 
 jobs:
   build:
