@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
+	"sync"
 
 	"app/config"
 	"app/tools"
@@ -64,9 +65,10 @@ func forcingData(definitionFile string, fs *filestore.FileStore) (tools.ForcingD
 	}
 
 	c := make(chan error, len(fFiles))
+	var mu sync.Mutex
 
 	for _, fp := range fFiles {
-		go tools.GetForcingData(&fd, *fs, fp, c)
+		go tools.GetForcingData(&fd, *fs, fp, c, &mu)
 	}
 
 	for i := 0; i < len(fFiles); i++ {

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/USACE/filestore"
 	"github.com/go-errors/errors"
@@ -244,7 +245,7 @@ func getReachBCs(sc *bufio.Scanner, sd *SteadyData) (skipScan bool, err error) {
 }
 
 // Get Forcing Data from steady flow file.
-func getSteadyData(fd *ForcingData, fs filestore.FileStore, flowFilePath string) error {
+func getSteadyData(fd *ForcingData, fs filestore.FileStore, flowFilePath string, mu *sync.Mutex) error {
 	flowFileName := filepath.Base(flowFilePath)
 
 	file, err := fs.GetObject(flowFilePath)
@@ -313,7 +314,10 @@ func getSteadyData(fd *ForcingData, fs filestore.FileStore, flowFilePath string)
 			}
 		}
 	}
+
+	mu.Lock()
 	fd.Steady[flowFileName] = sd
+	mu.Unlock()
 
 	return nil
 }

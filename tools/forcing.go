@@ -4,6 +4,7 @@ package tools
 
 import (
 	"path/filepath"
+	"sync"
 
 	"github.com/USACE/filestore"
 )
@@ -25,14 +26,14 @@ type BoundaryCondition struct {
 }
 
 // Get Forcing Data from steady, unsteady or quasi-steady flow file.
-func GetForcingData(fd *ForcingData, fs filestore.FileStore, flowFilePath string, c chan error) {
+func GetForcingData(fd *ForcingData, fs filestore.FileStore, flowFilePath string, c chan error, mu *sync.Mutex) {
 	extPrefix := filepath.Ext(flowFilePath)[0:2]
 	var err error
-	
+
 	if extPrefix == ".f" {
-		err = getSteadyData(fd, fs, flowFilePath)
+		err = getSteadyData(fd, fs, flowFilePath, mu)
 	} else if extPrefix == ".u" {
-		err = getUnsteadyData(fd, fs, flowFilePath)
+		err = getUnsteadyData(fd, fs, flowFilePath, mu)
 	} else if extPrefix == ".q" {
 		flowFileName := filepath.Base(flowFilePath)
 		fd.QuasiUnsteady[flowFileName] = "Not Implemented"
