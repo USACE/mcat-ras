@@ -25,9 +25,10 @@ type BoundaryCondition struct {
 }
 
 // Get Forcing Data from steady, unsteady or quasi-steady flow file.
-func GetForcingData(fd *ForcingData, fs filestore.FileStore, flowFilePath string) (err error) {
+func GetForcingData(fd *ForcingData, fs filestore.FileStore, flowFilePath string, c chan error) {
 	extPrefix := filepath.Ext(flowFilePath)[0:2]
-
+	var err error
+	
 	if extPrefix == ".f" {
 		err = getSteadyData(fd, fs, flowFilePath)
 	} else if extPrefix == ".u" {
@@ -37,5 +38,5 @@ func GetForcingData(fd *ForcingData, fs filestore.FileStore, flowFilePath string
 		fd.QuasiUnsteady[flowFileName] = "Not Implemented"
 	}
 
-	return err
+	c <- err
 }

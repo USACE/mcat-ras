@@ -54,19 +54,25 @@ func forcingData(definitionFile string, fs *filestore.FileStore) (tools.ForcingD
 	if err != nil {
 		return fd, errors.Wrap(err, 0)
 	}
+	fFiles := []string{}
 
 	for _, fp := range mfiles {
-
 		ext := filepath.Ext(fp)
+		if tools.RasRE.AllFlow.MatchString(ext) {
+			fFiles = append(fFiles, fp)
+		}
+	}
 
-		switch {
+	c := make(chan error, len(fFiles))
 
-		case tools.RasRE.AllFlow.MatchString(ext):
+	for _, fp := range fFiles {
+		go tools.GetForcingData(&fd, *fs, fp, c)
+	}
 
-			if err := tools.GetForcingData(&fd, *fs, fp); err != nil {
-				return fd, errors.Wrap(err, 0)
-			}
-
+	for i := 0; i < len(fFiles); i++ {
+		err = <-c
+		if err != nil {
+			return fd, err
 		}
 	}
 
