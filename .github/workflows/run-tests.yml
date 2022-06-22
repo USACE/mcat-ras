@@ -17,6 +17,7 @@ jobs:
       - name: 'Create env file'
         run: |
           touch .env
+          echo STORE_TYPE='S3' >> .env
           echo AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }} >> .env
           echo AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} >> .env
           echo AWS_DEFAULT_REGION=${{ secrets.AWS_DEFAULT_REGION }} >> .env
