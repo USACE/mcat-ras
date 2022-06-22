@@ -22,7 +22,7 @@ RUN go build main.go
 ENTRYPOINT CompileDaemon --build="go build main.go" --command=./main
 
 
-FROM osgeo/gdal:alpine-normal-3.2.1 as local-test
+FROM osgeo/gdal:alpine-normal-3.2.1 as local
 
 COPY --from=build /app/main /app/main
 
