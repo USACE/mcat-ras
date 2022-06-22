@@ -11,6 +11,7 @@ services:
     image: mcat-ras-api
     build:
       target: build
+      # target: local-test
       # target: prod
       context: ./
     volumes:
