@@ -32,12 +32,24 @@ The MCAT includes:
 ---
 
 - Add a .env file to the root level of this directory with the following structure:
-  ```
-  AWS_ACCESS_KEY_ID='**************'
-  AWS_SECRET_ACCESS_KEY='**************'
-  AWS_DEFAULT_REGION='us-east-1'
-  S3_BUCKET='******'
-  ```
+
+For local:
+
+```
+STORE_TYPE='LOCAL'
+```
+
+For S3:
+
+```
+STORE_TYPE='S3'
+AWS_ACCESS_KEY_ID='**************'
+AWS_SECRET_ACCESS_KEY='**************'
+AWS_DEFAULT_REGION='us-east-1'
+S3_BUCKET='******'
+```
+
+- Select the stage in `docker-compose.yml` file
 - Run `docker-compose up`
 - To teardown, run `docker-compose down`
 
