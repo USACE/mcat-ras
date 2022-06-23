@@ -282,7 +282,6 @@
 							"script": {
 								"type": "text/javascript",
 								"exec": [
-									"console.log(pm.response.code)",
 									"pm.test(\"Status code is equar or greater than 400\", function () {",
 									"    pm.expect(pm.response.code).to.be.greaterThan(399)",
 									"});"
