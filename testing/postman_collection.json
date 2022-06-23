@@ -10,50 +10,324 @@
 			"name": "Forcing Data",
 			"item": [
 				{
-					"name": "2D Unsteady Flow",
+					"name": "Positvies",
 					"item": [
 						{
-							"name": "BaldEagleCrkMulti2D",
+							"name": "2D Unsteady Flow",
+							"item": [
+								{
+									"name": "BaldEagleCrkMulti2D",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"const unsteadyData = pm.response.json().Unsteady;\r",
+													"\r",
+													"pm.test(\"title test\", function () {\r",
+													"    pm.expect(unsteadyData[\"BaldEagleDamBrk.u01\"][\"FlowTitle\"]).to.eql(\"1972 Flood Event - 2D Leve Structure\");\r",
+													"});\r",
+													"\r",
+													"pm.test(\"version test\", function () {\r",
+													"    pm.expect(unsteadyData[\"BaldEagleDamBrk.u01\"][\"ProgramVersion\"]).to.eql(\"5.10\");\r",
+													"});\r",
+													"\r",
+													"// Unsteady Boundary Conditions Test\r",
+													"\r",
+													"const ubcData1 = unsteadyData[\"BaldEagleDamBrk.u01\"][\"BoundaryConditions\"];\r",
+													"\r",
+													"\r",
+													"pm.test(\"bc >> areas >> normal depth test\", function () {\r",
+													"    let slope = 0;\r",
+													"    let type = ''\r",
+													"    ubcData1[\"Areas\"][\"BaldEagleCr\"].every(function (bc) {\r",
+													"        if (bc.bc_line === 'DSNormalDepth1') {\r",
+													"            type = bc.type;\r",
+													"            slope = bc.data[\"Friction Slope\"];\r",
+													"            return false\r",
+													"        }\r",
+													"    });\r",
+													"    pm.expect(type).to.eql(\"Normal Depth\")\r",
+													"    pm.expect(slope).to.eql(0.0003);\r",
+													"});\r",
+													"\r",
+													"\r",
+													"pm.test(\"bc >> areas >> lateral inflow hydrograph test\", function () {\r",
+													"    let valLen = 0;\r",
+													"    let type = ''\r",
+													"    ubcData1[\"Areas\"][\"Reservoir Pool\"].every(function (bc) {\r",
+													"        if (bc.bc_line === 'Upstream Q') {\r",
+													"            type = bc.type;\r",
+													"            valLen = (bc.data.values).length;\r",
+													"            return false\r",
+													"        }\r",
+													"    });\r",
+													"    pm.expect(type).to.eql(\"Lateral Inflow Hydrograph\")\r",
+													"    pm.expect(valLen).to.eql(141);\r",
+													"});"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "http://{{url}}/forcingdata?definition_file=mcat-ras-testing/Example_Projects/2D Unsteady Flow Hydraulics/BaldEagleCrkMulti2D/BaldEagleDamBrk.prj",
+											"protocol": "http",
+											"host": [
+												"{{url}}"
+											],
+											"path": [
+												"forcingdata"
+											],
+											"query": [
+												{
+													"key": "definition_file",
+													"value": "mcat-ras-testing/Example_Projects/2D Unsteady Flow Hydraulics/BaldEagleCrkMulti2D/BaldEagleDamBrk.prj"
+												}
+											]
+										}
+									},
+									"response": []
+								}
+							],
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"type": "text/javascript",
+										"exec": [
+											""
+										]
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"type": "text/javascript",
+										"exec": [
+											"pm.test(\"response should have Unsteady\", function () {",
+											"    pm.response.to.not.be.error;",
+											"    pm.response.to.have.jsonBody(\"Unsteady\");",
+											"    pm.response.to.not.have.jsonBody(\"error\");",
+											"});"
+										]
+									}
+								}
+							]
+						},
+						{
+							"name": "General",
+							"item": [
+								{
+									"name": "Bare minimum project",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"response should have Unsteady\", function () {\r",
+													"    pm.response.to.not.be.error;\r",
+													"    pm.response.to.have.jsonBody(\"Unsteady\");\r",
+													"    pm.response.to.not.have.jsonBody(\"error\");\r",
+													"});"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "http://{{url}}/forcingdata?definition_file=mcat-ras-testing/mocked-data/bare-minimum-project/BaldEagleDamBrk.prj",
+											"protocol": "http",
+											"host": [
+												"{{url}}"
+											],
+											"path": [
+												"forcingdata"
+											],
+											"query": [
+												{
+													"key": "definition_file",
+													"value": "mcat-ras-testing/mocked-data/bare-minimum-project/BaldEagleDamBrk.prj"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "No flow files",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"response should be empty json\", function () {\r",
+													"    pm.expect(pm.response.json()).to.eql({});\r",
+													"});"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "http://{{url}}/forcingdata?definition_file=mcat-ras-testing/mocked-data/no-flow-file/BaldEagleDamBrk.prj",
+											"protocol": "http",
+											"host": [
+												"{{url}}"
+											],
+											"path": [
+												"forcingdata"
+											],
+											"query": [
+												{
+													"key": "definition_file",
+													"value": "mcat-ras-testing/mocked-data/no-flow-file/BaldEagleDamBrk.prj"
+												}
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						}
+					],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									""
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status code is 200', function(){",
+									"    pm.response.to.have.status(200)",
+									"});",
+									""
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Negatives",
+					"item": [
+						{
+							"name": "File does not exist",
 							"event": [
 								{
 									"listen": "test",
 									"script": {
 										"exec": [
-											"pm.test('Status code is 200', function(){\r",
-											"    pm.response.to.have.status(200)\r",
+											"pm.test('Bad Reqest', function(){\r",
+											"     pm.response.to.be.badRequest\r",
 											"});\r",
 											"\r",
-											"pm.test(\"response must be valid and have a body\", function () {\r",
-											"     pm.response.to.be.ok;\r",
-											"     pm.response.to.be.withBody;\r",
-											"     pm.response.to.be.json;\r",
-											"});\r",
-											"\r",
-											"pm.test(\"response should have Unsteady\", function () {\r",
-											"    pm.response.to.not.be.error;\r",
-											"    pm.response.to.have.jsonBody({Unsteady:{}});\r",
-											"    pm.response.to.not.have.jsonBody(\"error\");\r",
-											"});\r",
-											"\r",
-											"//\r",
-											"\r",
-											"var unsteadyData = pm.response.json().Unsteady;\r",
-											"\r",
-											"pm.test(\"title test\", function () {\r",
-											"    pm.expect(unsteadyData[\"BaldEagleDamBrk.u01\"][\"FlowTitle\"]).to.eql(\"1972 Flood Event - 2D Leve Structure\");\r",
-											"});\r",
-											"\r",
-											"pm.test(\"version test\", function () {\r",
-											"    pm.expect(unsteadyData[\"BaldEagleDamBrk.u01\"][\"ProgramVersion\"]).to.eql(\"5.10\");\r",
-											"});\r",
-											"\r",
-											"// Unsteady Boundary Conditions Test\r",
-											"\r",
-											"var ubcData1 = unsteadyData[\"BaldEagleDamBrk.u01\"][\"BoundaryConditions\"];\r",
-											"\r",
-											"pm.test(\"bc >> areas >> normal depth test\", function () {\r",
-											"    pm.expect(ubcData1[\"Areas\"][\"BaldEagleCr\"][0][\"type\"]).to.eql(\"Normal Depth\");\r",
-											"    pm.expect(ubcData1[\"Areas\"][\"BaldEagleCr\"][0][\"data\"][\"Friction Slope\"]).to.eql(0.0003);\r",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://{{url}}/forcingdata?definition_file=mcat-ras-testing/Example_Projects/not-exist.prj",
+									"protocol": "http",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"forcingdata"
+									],
+									"query": [
+										{
+											"key": "definition_file",
+											"value": "mcat-ras-testing/Example_Projects/not-exist.prj"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									""
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"console.log(pm.response.code)",
+									"pm.test(\"Status code is equar or greater than 400\", function () {",
+									"    pm.expect(pm.response.code).to.be.greaterThan(399)",
+									"});"
+								]
+							}
+						}
+					]
+				}
+			],
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "General",
+			"item": [
+				{
+					"name": "Positives",
+					"item": [
+						{
+							"name": "shapefile not a model",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('Shapefile not a model', function(){\r",
+											"    pm.response.json === false\r",
 											"});\r",
 											""
 										],
@@ -65,18 +339,18 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "http://{{url}}/forcingdata?definition_file=mcat-ras-testing/Example_Projects/2D Unsteady Flow Hydraulics/BaldEagleCrkMulti2D/BaldEagleDamBrk.prj",
+									"raw": "http://{{url}}/isamodel?definition_file=mcat-ras-testing/Example_Projects/2D Unsteady Flow Hydraulics/BaldEagleCrkMulti2D/GISData/MainChannelBanks.prj",
 									"protocol": "http",
 									"host": [
 										"{{url}}"
 									],
 									"path": [
-										"forcingdata"
+										"isamodel"
 									],
 									"query": [
 										{
 											"key": "definition_file",
-											"value": "mcat-ras-testing/Example_Projects/2D Unsteady Flow Hydraulics/BaldEagleCrkMulti2D/BaldEagleDamBrk.prj"
+											"value": "mcat-ras-testing/Example_Projects/2D Unsteady Flow Hydraulics/BaldEagleCrkMulti2D/GISData/MainChannelBanks.prj"
 										}
 									]
 								}
@@ -103,7 +377,10 @@
 			"script": {
 				"type": "text/javascript",
 				"exec": [
-					""
+					"pm.test(\"response must be valid and have a body\", function () {",
+					"     pm.response.to.be.withBody;",
+					"     pm.response.to.be.json;",
+					"});"
 				]
 			}
 		}
