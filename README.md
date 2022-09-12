@@ -1,5 +1,8 @@
 # mcat-ras
 
+[![CI Pipeline](https://github.com/dewberry/mcat-ras/actions/workflows/build-release.yml/badge.svg)](https://github.com/Dewberry/mcat-ras/actions/workflows/build-release.yml)
+[![E2E Tests](https://github.com/dewberry/mcat-ras/actions/workflows/run-tests.yml/badge.svg?event=push)](https://github.com/Dewberry/mcat-ras/actions/workflows/run-tests.yml)
+
 Contains the HEC-RAS model content and analysis tool (MCAT). Given a .prj file, this MCAT identifies paths to the plan, forcing, and geometry files and extracts the model's metadata and geospatial data.
 
 The MCAT includes:
@@ -29,12 +32,24 @@ The MCAT includes:
 ---
 
 - Add a .env file to the root level of this directory with the following structure:
-  ```
-  AWS_ACCESS_KEY_ID='**************'
-  AWS_SECRET_ACCESS_KEY='**************'
-  AWS_DEFAULT_REGION='us-east-1'
-  S3_BUCKET='******'
-  ```
+
+For local:
+
+```
+STORE_TYPE='LOCAL'
+```
+
+For S3:
+
+```
+STORE_TYPE='S3'
+AWS_ACCESS_KEY_ID='**************'
+AWS_SECRET_ACCESS_KEY='**************'
+AWS_DEFAULT_REGION='us-east-1'
+S3_BUCKET='******'
+```
+
+- Select the stage in `docker-compose.yml` file
 - Run `docker-compose up`
 - To teardown, run `docker-compose down`
 
