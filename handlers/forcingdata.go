@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"sync"
 
-	"app/config"
-	"app/tools"
+	"github.com/Dewberry/mcat-ras/config"
+	"github.com/Dewberry/mcat-ras/tools"
 
 	"github.com/USACE/filestore"
 	"github.com/go-errors/errors" // warning: replaces standard errors

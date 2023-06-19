@@ -1,13 +1,14 @@
 package handlers
 
 import (
-	"app/tools"
 	"bufio"
 	"fmt"
 	"net/http"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/Dewberry/mcat-ras/tools"
 
 	"github.com/USACE/filestore" // warning: replaces standard errors
 	"github.com/labstack/echo/v4"
