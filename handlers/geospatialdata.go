@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"app/config"
-	"app/tools"
+	"github.com/Dewberry/mcat-ras/config"
+	"github.com/Dewberry/mcat-ras/tools"
 
 	"github.com/USACE/filestore"
 	"github.com/dewberry/gdal"

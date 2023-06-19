@@ -1,9 +1,9 @@
 package main
 
 import (
-	"app/config"
-	"app/handlers"
-	"app/pgdb"
+	"github.com/Dewberry/mcat-ras/config"
+	"github.com/Dewberry/mcat-ras/handlers"
+	"github.com/Dewberry/mcat-ras/pgdb"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"

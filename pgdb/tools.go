@@ -1,8 +1,6 @@
 package pgdb
 
 import (
-	"app/config"
-	ras "app/tools"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -11,6 +9,9 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/Dewberry/mcat-ras/config"
+	ras "github.com/Dewberry/mcat-ras/tools"
 
 	"github.com/go-errors/errors" // warning: replaces standard errors
 	"github.com/jmoiron/sqlx"
