@@ -1,6 +1,6 @@
-FROM osgeo/gdal:alpine-normal-3.2.1 as build
+FROM ghcr.io/osgeo/gdal:alpine-normal-3.8.3 as build
 
-COPY --from=golang:1.16.5-alpine3.13 /usr/local/go/ /usr/local/go/
+COPY --from=golang:1.21.3-alpine /usr/local/go/ /usr/local/go/
 
 RUN apk add --no-cache \
     pkgconfig \
@@ -12,17 +12,16 @@ ENV GOROOT=/usr/local/go
 ENV GOPATH=/go
 ENV PATH=$PATH:$GOROOT/bin:$GOPATH/bin
 
-RUN go get github.com/githubnemo/CompileDaemon
 
 COPY ./ /app
 WORKDIR /app
 
 RUN go build main.go
 
-ENTRYPOINT CompileDaemon --build="go build main.go" --command=./main
+# ENTRYPOINT CompileDaemon --build="go build main.go" --command=./main
 
 
-FROM osgeo/gdal:alpine-normal-3.2.1 as local
+FROM ghcr.io/osgeo/gdal:alpine-normal-3.8.3 as local
 
 COPY --from=build /app/main /app/main
 
@@ -36,9 +35,6 @@ RUN rm HEC-RAS_62_Example_Projects.zip
 ENTRYPOINT /app/main
 
 
-FROM osgeo/gdal:alpine-normal-3.2.1 as prod
-
-COPY --from=build /app/main /app/main
-
-ENTRYPOINT /app/main
-
+FROM ghcr.io/osgeo/gdal:alpine-normal-3.8.3 as prod
+COPY --from=build /app/main /main
+ENTRYPOINT /main
